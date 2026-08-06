@@ -83,10 +83,7 @@ class CoreTabs extends StatefulWidget {
 class _CoreTabsState extends State<CoreTabs> with TickerProviderStateMixin {
   final ScrollController _scroll = ScrollController();
 
-  late final AnimationController _indicator = AnimationController(
-    vsync: this,
-    duration: Motion.indicatorTravelCap,
-  );
+  late final AnimationController _indicator;
 
   _TabLayout? _layout;
   int _fromIndex = 0;
@@ -101,6 +98,10 @@ class _CoreTabsState extends State<CoreTabs> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _indicator = AnimationController(
+      vsync: this,
+      duration: Motion.indicatorTravelCap,
+    );
     _fromIndex = _toIndex = _selectedIndex;
     _indicator.value = 1;
   }

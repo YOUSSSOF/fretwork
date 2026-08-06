@@ -17,7 +17,7 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      overrides: [hiveStoreProvider.overrideWithValue(store)],
+      overrides: [storeProvider.overrideWithValue(store)],
       child: const FretworkApp(),
     ),
   );

@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fretwork/core/data/hive_boxes.dart';
+import 'package:fretwork/core/data/document_store.dart';
 import 'package:fretwork/core/data/providers.dart';
 import 'package:fretwork/core/models/preferences.dart';
 
@@ -9,8 +9,8 @@ import 'package:fretwork/core/models/preferences.dart';
 class PrefsNotifier extends Notifier<Preferences> {
   @override
   Preferences build() {
-    final store = ref.watch(hiveStoreProvider);
-    final doc = HiveStore.readDoc(store.preferences, ProfileKeys.prefs);
+    final store = ref.watch(storeProvider);
+    final doc = store.read(BoxNames.preferences, DocKeys.prefs);
     return doc == null ? Preferences.defaults : Preferences.fromJson(doc);
   }
 
@@ -26,14 +26,9 @@ class PrefsNotifier extends Notifier<Preferences> {
     await _persist(Preferences.defaults);
   }
 
-  Future<void> _persist(Preferences prefs) {
-    final store = ref.read(hiveStoreProvider);
-    return HiveStore.writeDoc(
-      store.preferences,
-      ProfileKeys.prefs,
-      prefs.toJson(),
-    );
-  }
+  Future<void> _persist(Preferences prefs) => ref
+      .read(storeProvider)
+      .write(BoxNames.preferences, DocKeys.prefs, prefs.toJson());
 }
 
 final preferencesProvider = NotifierProvider<PrefsNotifier, Preferences>(

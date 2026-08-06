@@ -44,10 +44,17 @@ class CoreCard extends StatefulWidget {
 
 class _CoreCardState extends State<CoreCard>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _accent = AnimationController(
-    vsync: this,
-    duration: Motion.base,
-  );
+  // Created in initState, not as a `late final` field initializer: a widget
+  // disposed before it ever builds would otherwise *construct* the controller
+  // inside dispose(), which looks up an ancestor on a deactivated element and
+  // throws.
+  late final AnimationController _accent;
+
+  @override
+  void initState() {
+    super.initState();
+    _accent = AnimationController(vsync: this, duration: Motion.base);
+  }
 
   @override
   void dispose() {

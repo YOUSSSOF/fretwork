@@ -50,17 +50,27 @@ class CorePressable extends StatefulWidget {
 
 class _CorePressableState extends State<CorePressable>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: Motion.instant,
-    reverseDuration: Motion.snappyCurve.settleDuration,
-  );
+  // Created in initState, not as `late final` field initializers: a widget
+  // disposed before it ever builds would otherwise construct the controller
+  // inside dispose(), which looks up an ancestor on a deactivated element and
+  // throws.
+  late final AnimationController _controller;
+  late final CurvedAnimation _press;
 
-  late final Animation<double> _press = CurvedAnimation(
-    parent: _controller,
-    curve: Curves.linear,
-    reverseCurve: Motion.snappyCurve.flipped,
-  );
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: Motion.instant,
+      reverseDuration: Motion.snappyCurve.settleDuration,
+    );
+    _press = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.linear,
+      reverseCurve: Motion.snappyCurve.flipped,
+    );
+  }
 
   /// Cached rather than read from context in the gesture callbacks: a cancel
   /// can arrive while the element is being deactivated, and an inherited-widget
@@ -75,6 +85,7 @@ class _CorePressableState extends State<CorePressable>
 
   @override
   void dispose() {
+    _press.dispose();
     _controller.dispose();
     super.dispose();
   }

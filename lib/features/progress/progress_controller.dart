@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fretwork/core/data/hive_boxes.dart';
+import 'package:fretwork/core/data/document_store.dart';
 import 'package:fretwork/core/data/providers.dart';
 import 'package:fretwork/core/models/user_profile.dart';
 
@@ -11,8 +11,8 @@ import 'package:fretwork/core/models/user_profile.dart';
 class ProfileNotifier extends Notifier<UserProfile> {
   @override
   UserProfile build() {
-    final store = ref.watch(hiveStoreProvider);
-    final doc = HiveStore.readDoc(store.profile, ProfileKeys.profile);
+    final store = ref.watch(storeProvider);
+    final doc = store.read(BoxNames.profile, DocKeys.profile);
     if (doc == null) {
       return UserProfile(startedAt: ref.read(clockProvider).now());
     }
@@ -21,12 +21,9 @@ class ProfileNotifier extends Notifier<UserProfile> {
 
   Future<void> _write(UserProfile profile) async {
     state = profile;
-    final store = ref.read(hiveStoreProvider);
-    await HiveStore.writeDoc(
-      store.profile,
-      ProfileKeys.profile,
-      profile.toJson(),
-    );
+    await ref
+        .read(storeProvider)
+        .write(BoxNames.profile, DocKeys.profile, profile.toJson());
   }
 
   Future<void> update(UserProfile Function(UserProfile current) change) {

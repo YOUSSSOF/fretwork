@@ -23,14 +23,12 @@ class CoreAmbientGlow extends StatefulWidget {
 
 class _CoreAmbientGlowState extends State<CoreAmbientGlow>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _float = AnimationController(
-    vsync: this,
-    duration: Motion.ambientFloat,
-  );
+  late final AnimationController _float;
 
   @override
   void initState() {
     super.initState();
+    _float = AnimationController(vsync: this, duration: Motion.ambientFloat);
     _float.repeat();
   }
 
