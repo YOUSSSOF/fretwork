@@ -19,6 +19,7 @@ import 'package:fretwork/features/analytics/analytics_controller.dart';
 import 'package:fretwork/features/analytics/analytics_service.dart';
 import 'package:fretwork/features/analytics/export/pdf_export.dart';
 import 'package:fretwork/features/analytics/widgets/analytics_charts.dart';
+import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:fretwork/router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -44,7 +45,10 @@ class AnalyticsScreen extends ConsumerWidget {
         ),
       ],
       body: ListView(
-        padding: const EdgeInsets.only(top: Sp.md, bottom: Sp.huge),
+        padding: EdgeInsets.only(
+          top: Sp.md,
+          bottom: context.shellBottomInset + Sp.xl,
+        ),
         children: [
           const _FilterBar(),
           const SizedBox(height: Sp.lg),

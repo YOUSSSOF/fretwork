@@ -11,6 +11,7 @@ import 'package:fretwork/core/widgets/core_scaffold.dart';
 import 'package:fretwork/core/widgets/core_section_header.dart';
 import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/library/library_controller.dart';
+import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:fretwork/router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -43,7 +44,10 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
       title: 'Library',
       subtitle: '${sections.length} parts',
       body: ListView(
-        padding: const EdgeInsets.only(top: Sp.md, bottom: Sp.huge),
+        padding: EdgeInsets.only(
+          top: Sp.md,
+          bottom: context.shellBottomInset + Sp.xl,
+        ),
         children: [
           TextField(
             controller: _search,

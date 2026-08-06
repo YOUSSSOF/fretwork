@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:fretwork/core/data/course_providers.dart';
@@ -15,6 +17,7 @@ import 'package:fretwork/core/widgets/core_button.dart';
 import 'package:fretwork/core/widgets/core_chip.dart';
 import 'package:fretwork/core/widgets/core_empty_state.dart';
 import 'package:fretwork/core/widgets/core_icon_button.dart';
+import 'package:fretwork/core/widgets/core_pressable.dart';
 import 'package:fretwork/core/widgets/core_progress_ring.dart';
 import 'package:fretwork/core/widgets/core_segmented_grid.dart';
 import 'package:fretwork/core/widgets/core_sheet.dart';
@@ -497,9 +500,24 @@ class _MetronomePanel extends ConsumerWidget {
       children: [
         MetronomeDial(state: metronome, onTempoChanged: notifier.setTempo),
         const SizedBox(height: Sp.lg),
+        // Explicit steps in both directions. The dial is faster for a big
+        // move, but it is a poor way to take exactly one bpm off, and there
+        // was no way at all to go down without it.
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            _TempoStep(
+              label: '-5',
+              enabled: metronome.canGoSlower,
+              onPressed: () => notifier.nudge(-5),
+            ),
+            const SizedBox(width: Sp.sm),
+            _TempoStep(
+              label: '-1',
+              enabled: metronome.canGoSlower,
+              onPressed: () => notifier.nudge(-1),
+            ),
+            const SizedBox(width: Sp.md),
             CoreIconButton(
               icon: metronome.running
                   ? Icons.pause_rounded
@@ -510,7 +528,24 @@ class _MetronomePanel extends ConsumerWidget {
               bordered: true,
               onPressed: notifier.toggle,
             ),
+            const SizedBox(width: Sp.md),
+            _TempoStep(
+              label: '+1',
+              enabled: metronome.canGoFaster,
+              onPressed: () => notifier.nudge(1),
+            ),
             const SizedBox(width: Sp.sm),
+            _TempoStep(
+              label: '+5',
+              enabled: metronome.canGoFaster,
+              onPressed: () => notifier.nudge(5),
+            ),
+          ],
+        ),
+        const SizedBox(height: Sp.md),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
             CoreButton.secondary(
               label: '+$kLadderStep bpm',
               onPressed: metronome.canGoFaster ? notifier.stepLadder : null,
@@ -596,6 +631,75 @@ class _ControlBar extends ConsumerWidget {
             onPressed: notifier.next,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A single-tap tempo step. Long-press repeats, so holding -1 walks the tempo
+/// down rather than needing thirty taps.
+class _TempoStep extends StatefulWidget {
+  const _TempoStep({
+    required this.label,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final String label;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  State<_TempoStep> createState() => _TempoStepState();
+}
+
+class _TempoStepState extends State<_TempoStep> {
+  Timer? _repeat;
+
+  @override
+  void dispose() {
+    _repeat?.cancel();
+    super.dispose();
+  }
+
+  void _start() {
+    if (!widget.enabled) return;
+    widget.onPressed();
+    _repeat?.cancel();
+    _repeat = Timer.periodic(
+      const Duration(milliseconds: 120),
+      (_) => widget.enabled ? widget.onPressed() : _stop(),
+    );
+  }
+
+  void _stop() {
+    _repeat?.cancel();
+    _repeat = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Listener(
+      onPointerUp: (_) => _stop(),
+      onPointerCancel: (_) => _stop(),
+      child: CorePressable(
+        onPressed: widget.enabled ? widget.onPressed : null,
+        onLongPress: widget.enabled ? _start : null,
+        semanticLabel: '${widget.label} beats per minute',
+        child: Container(
+          width: Layout.touchTarget,
+          height: Layout.touchTarget,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.surface1,
+            border: Border.all(color: colors.border),
+          ),
+          child: CoreText.label(
+            widget.label,
+            color: widget.enabled ? colors.textPrimary : colors.textTertiary,
+          ),
+        ),
       ),
     );
   }

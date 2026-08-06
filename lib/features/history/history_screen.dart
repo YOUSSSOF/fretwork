@@ -18,6 +18,7 @@ import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/history/history_controller.dart';
 import 'package:fretwork/features/history/widgets/calendar_heat_map.dart';
 import 'package:fretwork/features/session/records_controller.dart';
+import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class HistoryScreen extends ConsumerStatefulWidget {
@@ -54,7 +55,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       subtitle: month.monthLabel,
       showBack: true,
       body: ListView(
-        padding: const EdgeInsets.only(bottom: Sp.huge),
+        padding: EdgeInsets.only(bottom: context.shellBottomInset + Sp.xl),
         children: [
           _MonthBar(
             month: month,

@@ -16,6 +16,7 @@ import 'package:fretwork/core/widgets/core_sheet.dart';
 import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/onboarding/onboarding_controller.dart';
 import 'package:fretwork/features/progress/progress_controller.dart';
+import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 enum _PartState { unlocked, next, locked }
@@ -38,7 +39,10 @@ class MilestoneScreen extends ConsumerWidget {
       showBack: true,
       glow: true,
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: Sp.lg),
+        padding: EdgeInsets.only(
+          top: Sp.lg,
+          bottom: context.shellBottomInset + Sp.xl,
+        ),
         children: [
           const CoreText.body(
             'Mark a part as watched once you have actually worked through it. '

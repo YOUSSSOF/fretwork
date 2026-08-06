@@ -51,6 +51,32 @@ const List<NavDestination> kNavDestinations = [
   ),
 ];
 
+/// Height of the nav bar's content, before the device's own bottom inset.
+const double kNavBarHeight = 60;
+
+/// Publishes how much of the bottom of the screen the nav bar covers.
+///
+/// The shell deliberately extends the body behind the glass nav bar, so
+/// scrolling content passes under it. That only works if the scroll views know
+/// to end above it — otherwise the last card sits permanently behind the bar.
+class ShellInsets extends InheritedWidget {
+  const ShellInsets({required this.bottom, required super.child, super.key});
+
+  final double bottom;
+
+  static double of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ShellInsets>()?.bottom ?? 0;
+
+  @override
+  bool updateShouldNotify(ShellInsets oldWidget) => oldWidget.bottom != bottom;
+}
+
+extension ShellInsetsX on BuildContext {
+  /// Bottom padding a scroll view needs to clear the nav bar. Zero outside the
+  /// shell, so full-screen routes are unaffected.
+  double get shellBottomInset => ShellInsets.of(this);
+}
+
 class AppShell extends StatelessWidget {
   const AppShell({required this.shell, super.key});
 
@@ -61,7 +87,10 @@ class AppShell extends StatelessWidget {
     return Scaffold(
       backgroundColor: context.colors.surface0,
       extendBody: true,
-      body: BranchSwitcher(index: shell.currentIndex, child: shell),
+      body: ShellInsets(
+        bottom: kNavBarHeight + MediaQuery.paddingOf(context).bottom,
+        child: BranchSwitcher(index: shell.currentIndex, child: shell),
+      ),
       bottomNavigationBar: _NavBar(
         currentIndex: shell.currentIndex,
         onSelected: (index) => shell.goBranch(
@@ -93,7 +122,7 @@ class _NavBar extends StatelessWidget {
         child: SafeArea(
           top: false,
           child: SizedBox(
-            height: 60,
+            height: kNavBarHeight,
             child: Row(
               children: [
                 for (var i = 0; i < kNavDestinations.length; i++)

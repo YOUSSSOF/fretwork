@@ -6,6 +6,7 @@ import 'package:fretwork/core/motion/motion_scope.dart';
 import 'package:fretwork/core/motion/motion_tokens.dart';
 import 'package:fretwork/core/theme/app_colors.dart';
 import 'package:fretwork/core/theme/app_spacing.dart';
+import 'package:fretwork/core/theme/glass.dart';
 import 'package:fretwork/core/utils/date_x.dart';
 import 'package:fretwork/core/widgets/core_button.dart';
 import 'package:fretwork/core/widgets/core_card.dart';
@@ -22,6 +23,7 @@ import 'package:fretwork/features/routine/routine_controller.dart';
 import 'package:fretwork/features/routine/routine_service.dart';
 import 'package:fretwork/features/routine/widgets/routine_block_card.dart';
 import 'package:fretwork/features/session/records_controller.dart';
+import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:fretwork/router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -63,6 +65,7 @@ class _RoutineScreenState extends ConsumerState<RoutineScreen> {
       ],
       body: Column(
         children: [
+          const SizedBox(height: Sp.lg),
           _WeekStrip(
             today: today,
             selected: selected,
@@ -70,6 +73,7 @@ class _RoutineScreenState extends ConsumerState<RoutineScreen> {
               () => _viewing = date.isSameDayAs(today) ? null : date,
             ),
           ),
+          const SizedBox(height: Sp.md),
           Expanded(
             child: _Body(
               routine: routine,
@@ -80,7 +84,10 @@ class _RoutineScreenState extends ConsumerState<RoutineScreen> {
           ),
         ],
       ),
-      bottomBar: isToday && routine != null && !routine.isRestDay
+      // The action bar floats over the list rather than sitting in the
+      // Scaffold's bottom slot: the shell's own nav bar already owns that
+      // space, and two bars stacked there overlapped.
+      floating: isToday && routine != null && !routine.isRestDay
           ? _ActionBar(routine: routine)
           : null,
     );
@@ -119,7 +126,10 @@ class _Body extends StatelessWidget {
     final provisional = isProvisional(selected, today);
 
     return ListView(
-      padding: const EdgeInsets.only(top: Sp.md, bottom: 120),
+      padding: EdgeInsets.only(
+        top: Sp.md,
+        bottom: context.shellBottomInset + _ActionBar.height + Sp.xl,
+      ),
       children: [
         if (provisional)
           Padding(
@@ -262,30 +272,51 @@ class _ActionBar extends ConsumerWidget {
 
   final RoutineDay routine;
 
+  /// Content height, before the device inset. The list reserves this so items
+  /// can always be scrolled clear of the bar.
+  static const double height = 76;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SafeArea(
-      top: false,
+    final colors = context.colors;
+
+    return Align(
+      alignment: Alignment.bottomCenter,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(Sp.lg, 0, Sp.lg, Sp.lg),
-        child: Row(
-          children: [
-            Expanded(
-              child: CoreButton.primary(
-                label: 'Start session',
-                size: CoreButtonSize.lg,
-                fullWidth: true,
-                leading: Icons.play_arrow_rounded,
-                onPressed: () => context.go(Routes.session),
-              ),
+        padding: EdgeInsets.only(bottom: context.shellBottomInset),
+        child: GlassSurface(
+          enhanced: true,
+          bordered: false,
+          child: Container(
+            height: height,
+            padding: const EdgeInsets.symmetric(
+              horizontal: Sp.lg,
+              vertical: Sp.md,
             ),
-            const SizedBox(width: Sp.sm),
-            CoreButton.secondary(
-              label: 'Length',
-              size: CoreButtonSize.lg,
-              onPressed: () => _adjustLength(context, ref),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: colors.border)),
             ),
-          ],
+            child: Row(
+              children: [
+                Expanded(
+                  child: CoreButton.primary(
+                    label: 'Start session',
+                    size: CoreButtonSize.lg,
+                    fullWidth: true,
+                    leading: Icons.play_arrow_rounded,
+                    onPressed: () => context.go(Routes.session),
+                  ),
+                ),
+                const SizedBox(width: Sp.sm),
+                CoreButton.secondary(
+                  label: 'Length',
+                  size: CoreButtonSize.lg,
+                  leading: Icons.tune_rounded,
+                  onPressed: () => _adjustLength(context, ref),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

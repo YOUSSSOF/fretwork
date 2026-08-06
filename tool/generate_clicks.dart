@@ -10,15 +10,39 @@ import 'dart:typed_data';
 const int _sampleRate = 44100;
 
 void main() {
+  // Three tones per sound, not two. The downbeat has to be distinguishable
+  // from beats 2-4, and beats from the subdivisions between them — otherwise
+  // there is no way to hear where the bar restarts, which is the whole point
+  // of a click.
+  //
+  // Pitch does the work rather than volume: an octave between the downbeat and
+  // the subdivisions is unmistakable even at low listening levels, whereas a
+  // loud accent just becomes a loud click.
   final specs = <String, _Click>{
-    // Two tones per sound: the accent sits a fifth above the beat so the
-    // downbeat is unmistakable without being louder.
-    'click_lo': const _Click(frequency: 1000, decay: 0.030, noise: 0.10),
-    'click_hi': const _Click(frequency: 1500, decay: 0.030, noise: 0.10),
-    'woodblock_lo': const _Click(frequency: 760, decay: 0.055, noise: 0.04),
-    'woodblock_hi': const _Click(frequency: 1140, decay: 0.055, noise: 0.04),
-    'beep_lo': const _Click(frequency: 880, decay: 0.070, noise: 0),
-    'beep_hi': const _Click(frequency: 1320, decay: 0.070, noise: 0),
+    'click_down': const _Click(frequency: 1800, decay: 0.034, noise: 0.12),
+    'click_beat': const _Click(frequency: 1200, decay: 0.030, noise: 0.10),
+    'click_sub': const _Click(
+      frequency: 900,
+      decay: 0.024,
+      noise: 0.06,
+      amplitude: 0.55,
+    ),
+    'woodblock_down': const _Click(frequency: 1400, decay: 0.060, noise: 0.05),
+    'woodblock_beat': const _Click(frequency: 950, decay: 0.055, noise: 0.04),
+    'woodblock_sub': const _Click(
+      frequency: 700,
+      decay: 0.045,
+      noise: 0.03,
+      amplitude: 0.55,
+    ),
+    'beep_down': const _Click(frequency: 1760, decay: 0.075, noise: 0),
+    'beep_beat': const _Click(frequency: 1175, decay: 0.070, noise: 0),
+    'beep_sub': const _Click(
+      frequency: 880,
+      decay: 0.055,
+      noise: 0,
+      amplitude: 0.55,
+    ),
   };
 
   Directory('assets/audio').createSync(recursive: true);
@@ -34,6 +58,7 @@ class _Click {
     required this.frequency,
     required this.decay,
     required this.noise,
+    this.amplitude = 0.85,
   });
 
   final double frequency;
@@ -44,6 +69,9 @@ class _Click {
 
   /// A little noise at the attack gives the transient something to bite on.
   final double noise;
+
+  /// Subdivisions sit back a little so the pulse still reads as the pulse.
+  final double amplitude;
 
   Float64List render() {
     final length = (decay * _sampleRate).round();
@@ -59,7 +87,7 @@ class _Click {
       final attack = noise == 0
           ? 0.0
           : (random.nextDouble() * 2 - 1) * noise * math.exp(-t / 0.002);
-      samples[i] = ((tone + attack) * envelope * 0.85).clamp(-1.0, 1.0);
+      samples[i] = ((tone + attack) * envelope * amplitude).clamp(-1.0, 1.0);
     }
     return samples;
   }

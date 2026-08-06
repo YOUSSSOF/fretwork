@@ -12,8 +12,22 @@ const int kMaxBpm = 260;
 /// Subdivisions the click can actually play.
 const List<int> kSubdivisions = [1, 2, 3, 4, 6, 8];
 
-/// Where a beat sits in the bar.
-enum BeatKind { accent, beat }
+/// Beats per bar the click counts before the downbeat comes round again.
+const int kBeatsPerBar = 4;
+
+/// Where a beat sits in the bar. Three kinds, not two: without a distinct
+/// downbeat there is no way to hear where the bar restarts, which is most of
+/// what a click is for.
+enum BeatKind {
+  /// Beat one. Highest pitch.
+  downbeat,
+
+  /// Beats two, three and four.
+  beat,
+
+  /// The notes between the beats. Lower and quieter, so the pulse still reads.
+  subdivision,
+}
 
 /// Computes when beats happen.
 ///
@@ -40,13 +54,16 @@ class BeatClock {
   int dueIndex(Duration elapsed) =>
       (elapsed.inMicroseconds / intervalMicros).floor();
 
-  BeatKind kindOf(int index, {required bool accentBeatOne}) =>
-      accentBeatOne && index % subdivision == 0
-      ? BeatKind.accent
-      : BeatKind.beat;
+  BeatKind kindOf(int index, {required bool accentBeatOne}) {
+    if (index % subdivision != 0) return BeatKind.subdivision;
+    final isDownbeat = (index ~/ subdivision) % kBeatsPerBar == 0;
+    // With the accent turned off every beat sounds the same, which is what
+    // that preference is for.
+    return isDownbeat && accentBeatOne ? BeatKind.downbeat : BeatKind.beat;
+  }
 
   /// Which beat of the bar this is, 1-based, for the visual indicator.
-  int beatInBar(int index) => (index ~/ subdivision) % 4 + 1;
+  int beatInBar(int index) => (index ~/ subdivision) % kBeatsPerBar + 1;
 }
 
 /// Plays the clicks. Behind an interface so the audio backend can be swapped —
@@ -69,8 +86,7 @@ abstract interface class MetronomeEngine {
 class SoLoudMetronome implements MetronomeEngine {
   SoLoudMetronome();
 
-  AudioSource? _accent;
-  AudioSource? _beat;
+  final Map<BeatKind, AudioSource> _sources = {};
   MetronomeSound? _loaded;
 
   /// Set when the audio backend cannot be reached at all — no native library
@@ -86,14 +102,18 @@ class SoLoudMetronome implements MetronomeEngine {
       MetronomeSound.woodblock => 'woodblock',
       MetronomeSound.beep => 'beep',
     };
-    final suffix = kind == BeatKind.accent ? 'hi' : 'lo';
+    final suffix = switch (kind) {
+      BeatKind.downbeat => 'down',
+      BeatKind.beat => 'beat',
+      BeatKind.subdivision => 'sub',
+    };
     return 'assets/audio/${stem}_$suffix.wav';
   }
 
   @override
   Future<void> load(MetronomeSound sound) async {
     if (_unavailable) return;
-    if (_loaded == sound && _accent != null) return;
+    if (_loaded == sound && _sources.length == BeatKind.values.length) return;
 
     try {
       final soloud = SoLoud.instance;
@@ -104,10 +124,11 @@ class SoLoudMetronome implements MetronomeEngine {
       }
 
       await _release();
-      // Both samples are preloaded: loading on the first beat would make the
+      // All three are preloaded: loading on the first beat would make the
       // first click of every session late, which is the one that matters most.
-      _accent = await soloud.loadAsset(_assetFor(sound, BeatKind.accent));
-      _beat = await soloud.loadAsset(_assetFor(sound, BeatKind.beat));
+      for (final kind in BeatKind.values) {
+        _sources[kind] = await soloud.loadAsset(_assetFor(sound, kind));
+      }
       _loaded = sound;
     } on Object catch (error) {
       // Deliberately broad: the failure modes here span an FFI ArgumentError
@@ -121,7 +142,7 @@ class SoLoudMetronome implements MetronomeEngine {
   @override
   Future<void> play(BeatKind kind) async {
     if (_unavailable) return;
-    final source = kind == BeatKind.accent ? _accent : _beat;
+    final source = _sources[kind];
     if (source == null) return;
     try {
       // `play` returns a handle synchronously rather than a Future — the sound
@@ -135,11 +156,10 @@ class SoLoudMetronome implements MetronomeEngine {
 
   Future<void> _release() async {
     final soloud = SoLoud.instance;
-    for (final source in [_accent, _beat]) {
-      if (source != null) await soloud.disposeSource(source);
+    for (final source in _sources.values) {
+      await soloud.disposeSource(source);
     }
-    _accent = null;
-    _beat = null;
+    _sources.clear();
     _loaded = null;
   }
 

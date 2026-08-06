@@ -16,6 +16,10 @@ abstract final class BoxNames {
   static const String tempos = 'tempos';
   static const String rotation = 'rotation';
 
+  /// Tablature the user has transcribed. Empty on a fresh install — the app
+  /// ships no notation.
+  static const String tabs = 'tabs';
+
   static const List<String> all = [
     profile,
     preferences,
@@ -24,6 +28,7 @@ abstract final class BoxNames {
     sessions,
     tempos,
     rotation,
+    tabs,
   ];
 }
 

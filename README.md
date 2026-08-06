@@ -7,7 +7,7 @@
 **An offline guitar practice companion that turns a technique curriculum into a
 daily routine, a session timer, and an honest record of what you actually did.**
 
-`Flutter 3.41` · `Dart 3.11` · `Android + iOS` · `316 tests` · `no network`
+`Flutter 3.41` · `Dart 3.11` · `Android + iOS` · `342 tests` · `no network`
 
 </div>
 
@@ -54,6 +54,12 @@ It never wraps to a second row, never overlaps, never compresses a tab below its
 density minimum, and never ellipsizes — 80 tests hold it to that across
 320/390/430/768 dp, 2–24 items and three densities.
 
+**Tablature you can actually read.** A `CustomPaint` stave renderer with the
+string lines knocked out behind each fret number, slurs arcing between hammered
+notes, bend arrows, slides and palm-mute brackets. It reads tab you paste in
+standard ASCII form, previews it live as you type, and stores it per exercise or
+per variant. The app ships no notation of its own — see *Content* below.
+
 **Empty days are data.** Every day between launches gets a record, so the
 calendar shows the days you missed instead of leaving them blank, and adherence
 divides by the days you were meant to practise rather than the days you happened
@@ -97,7 +103,7 @@ dart run tool/generate_icon.dart && dart run flutter_launcher_icons
 ```
 
 ```bash
-flutter test          # 316 tests
+flutter test          # 342 tests
 dart analyze          # clean
 flutter build apk --release
 ```
@@ -137,6 +143,11 @@ position, tempo figures, procedure types, page and track pointers, and
 descriptions written for this app. No notation, no tablature, no scans. Each
 exercise shows a page reference and the book stays open next to the phone —
 that is the intended workflow, not a limitation.
+
+Tablature works the same way: the renderer and the editor are part of the app,
+but the transcriptions are yours. Nothing ships in the `tabs` box, and Fretwork
+will not reproduce a published tab book — paste in what you have transcribed
+from material you own and it will be drawn properly.
 
 **The page and CD-track numbers in `course_seed.dart` are placeholders.** They
 are sequential and plausible, not transcribed from a copy of the book. Correct

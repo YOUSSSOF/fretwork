@@ -19,8 +19,10 @@ import 'package:fretwork/core/widgets/core_sheet.dart';
 import 'package:fretwork/core/widgets/core_tabs.dart';
 import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/library/library_controller.dart';
+import 'package:fretwork/features/library/tab/tab_section.dart';
 import 'package:fretwork/features/session/records_controller.dart';
 import 'package:fretwork/features/settings/preferences_controller.dart';
+import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:fretwork/router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -74,7 +76,10 @@ class _ExerciseDetailScreenState extends ConsumerState<ExerciseDetailScreen> {
       showBack: true,
       onBack: () => context.go(Routes.library),
       body: ListView(
-        padding: const EdgeInsets.only(top: Sp.md, bottom: Sp.huge),
+        padding: EdgeInsets.only(
+          top: Sp.md,
+          bottom: context.shellBottomInset + Sp.xl,
+        ),
         children: [
           _Header(exercise: exercise),
           if (exercise.variants.isNotEmpty) ...[
@@ -126,6 +131,13 @@ class _ExerciseDetailScreenState extends ConsumerState<ExerciseDetailScreen> {
               ),
             ),
           ],
+          const CoreSectionHeader(title: 'Tab'),
+          TabSection(
+            exerciseId: exercise.id,
+            variantId: index >= 0 ? selected : null,
+            exerciseLabel: exercise.label,
+            variantLabel: index >= 0 ? exercise.variants[index].label : null,
+          ),
           const CoreSectionHeader(title: 'Practice'),
           _PracticePanel(
             exercise: exercise,

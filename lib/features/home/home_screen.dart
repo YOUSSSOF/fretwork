@@ -14,6 +14,7 @@ import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/routine/routine_controller.dart';
 import 'package:fretwork/features/session/records_controller.dart';
 import 'package:fretwork/features/settings/preferences_controller.dart';
+import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:fretwork/router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -42,7 +43,10 @@ class HomeScreen extends ConsumerWidget {
         ),
       ],
       body: ListView(
-        padding: const EdgeInsets.only(top: Sp.md, bottom: Sp.huge),
+        padding: EdgeInsets.only(
+          top: Sp.md,
+          bottom: context.shellBottomInset + Sp.xl,
+        ),
         children: [
           for (final card in prefs.visibleCards)
             Padding(

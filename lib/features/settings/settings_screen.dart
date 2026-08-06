@@ -21,6 +21,7 @@ import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/progress/progress_controller.dart';
 import 'package:fretwork/features/settings/preferences_controller.dart';
 import 'package:fretwork/features/settings/widgets/home_layout_editor.dart';
+import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -35,7 +36,7 @@ class SettingsScreen extends ConsumerWidget {
     return CoreScaffold(
       title: 'Settings',
       body: ListView(
-        padding: const EdgeInsets.only(bottom: Sp.huge),
+        padding: EdgeInsets.only(bottom: context.shellBottomInset + Sp.xl),
         children: [
           const CoreSectionHeader(
             title: 'Practice',

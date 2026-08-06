@@ -86,12 +86,52 @@ void main() {
       }
     });
 
-    test('accents land on the first note of each beat', () {
+    test('only the downbeat of the bar gets the downbeat tone', () {
       const clock = BeatClock(bpm: 120, subdivision: 4);
-      expect(clock.kindOf(0, accentBeatOne: true), BeatKind.accent);
-      expect(clock.kindOf(1, accentBeatOne: true), BeatKind.beat);
-      expect(clock.kindOf(4, accentBeatOne: true), BeatKind.accent);
+
+      // Sixteenths: index 0 is beat one, 4 is beat two, 16 is the next bar.
+      expect(clock.kindOf(0, accentBeatOne: true), BeatKind.downbeat);
+      expect(clock.kindOf(4, accentBeatOne: true), BeatKind.beat);
+      expect(clock.kindOf(8, accentBeatOne: true), BeatKind.beat);
+      expect(clock.kindOf(12, accentBeatOne: true), BeatKind.beat);
+      expect(clock.kindOf(16, accentBeatOne: true), BeatKind.downbeat);
+    });
+
+    test('the notes between beats get the quieter subdivision tone', () {
+      const clock = BeatClock(bpm: 120, subdivision: 4);
+      for (final index in [1, 2, 3, 5, 6, 7]) {
+        expect(
+          clock.kindOf(index, accentBeatOne: true),
+          BeatKind.subdivision,
+          reason: 'index $index is between beats',
+        );
+      }
+    });
+
+    test('turning the accent off makes every beat sound the same', () {
+      const clock = BeatClock(bpm: 120, subdivision: 4);
       expect(clock.kindOf(0, accentBeatOne: false), BeatKind.beat);
+      expect(clock.kindOf(16, accentBeatOne: false), BeatKind.beat);
+      // Subdivisions are still distinct — that is not what the accent
+      // preference controls.
+      expect(clock.kindOf(1, accentBeatOne: false), BeatKind.subdivision);
+    });
+
+    test('the downbeat comes round once per bar at every subdivision', () {
+      for (final subdivision in kSubdivisions) {
+        final clock = BeatClock(bpm: 120, subdivision: subdivision);
+        final downbeats = [
+          for (var i = 0; i < subdivision * kBeatsPerBar * 3; i++)
+            if (clock.kindOf(i, accentBeatOne: true) == BeatKind.downbeat) i,
+        ];
+        expect(
+          downbeats,
+          hasLength(3),
+          reason: 'three bars at 1/$subdivision should give three downbeats',
+        );
+        expect(downbeats.first, 0);
+        expect(downbeats[1], subdivision * kBeatsPerBar);
+      }
     });
 
     test('the bar position cycles 1-2-3-4', () {

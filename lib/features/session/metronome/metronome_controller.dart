@@ -110,11 +110,11 @@ class MetronomeNotifier extends Notifier<MetronomeState> {
     state = state.copyWith(
       beatIndex: index,
       beatInBar: _runner?.clock.beatInBar(index) ?? 0,
-      accent: kind == BeatKind.accent,
+      accent: kind == BeatKind.downbeat,
     );
     if (ref.read(preferencesProvider).hapticOnBeat) {
       unawaited(
-        kind == BeatKind.accent
+        kind == BeatKind.downbeat
             ? HapticFeedback.lightImpact()
             : HapticFeedback.selectionClick(),
       );

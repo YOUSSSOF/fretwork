@@ -4,7 +4,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 
 /// Bumped whenever the shape of a persisted document changes. [_migrations]
 /// must gain a closure for every step.
-const int kSchemaVersion = 1;
+const int kSchemaVersion = 2;
 
 /// Bumped whenever `course_seed.dart` changes. On bump, stored routines are
 /// re-validated and any item referencing a removed exercise id is dropped.
@@ -35,7 +35,12 @@ Future<DocumentStore> bootstrap() async {
 ///
 /// A fresh install skips them all: the store is empty, so there is nothing to
 /// migrate and the version is simply stamped.
-final Map<int, Future<void> Function(DocumentStore store)> _migrations = {};
+final Map<int, Future<void> Function(DocumentStore store)> _migrations = {
+  // v2 added the `tabs` box. Opening a box that has never been written is
+  // already a no-op, so there is nothing to move — the version bump exists so
+  // the step is recorded rather than skipped silently.
+  2: (store) async {},
+};
 
 @visibleForTesting
 Future<void> migrate(DocumentStore store) async {
