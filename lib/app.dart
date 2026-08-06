@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fretwork/core/models/preferences.dart';
 import 'package:fretwork/core/motion/motion_scope.dart';
 import 'package:fretwork/core/theme/app_theme.dart';
-import 'package:fretwork/features/debug/press_lab_screen.dart';
+import 'package:fretwork/features/debug/gallery_screen.dart';
 import 'package:fretwork/features/settings/preferences_controller.dart';
 
 class FretworkApp extends ConsumerWidget {
@@ -22,7 +22,7 @@ class FretworkApp extends ConsumerWidget {
       themeMode: ThemeMode.dark,
       builder: (context, child) =>
           _MotionRoot(prefs: prefs, child: child ?? const SizedBox.shrink()),
-      home: const PressLabScreen(),
+      home: const GalleryScreen(),
     );
   }
 }
