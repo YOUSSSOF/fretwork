@@ -36,3 +36,13 @@ flutter:
   uses-material-design: true
   assets:
     - assets/audio/
+  fonts:
+    # Bundled, never fetched: the app makes no network calls, and the PDF
+    # needs a Unicode-capable face because the pdf package's built-in
+    # Helvetica cannot render anything outside Latin-1.
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSans-Bold.ttf
+          weight: 700

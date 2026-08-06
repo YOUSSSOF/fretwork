@@ -17,6 +17,7 @@ import 'package:fretwork/core/widgets/core_segmented_grid.dart';
 import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/analytics/analytics_controller.dart';
 import 'package:fretwork/features/analytics/analytics_service.dart';
+import 'package:fretwork/features/analytics/export/pdf_export.dart';
 import 'package:fretwork/features/analytics/widgets/analytics_charts.dart';
 import 'package:fretwork/router.dart';
 import 'package:go_router/go_router.dart';
@@ -76,6 +77,8 @@ class AnalyticsScreen extends ConsumerWidget {
             TimeOfDayHistogram(sessionsByHour: summary.sessionsByHour),
             const CoreSectionHeader(title: 'Tempo progress'),
             _TempoTable(summary: summary),
+            const SizedBox(height: Sp.xl),
+            const _ExportRow(),
           ],
         ],
       ),
@@ -321,6 +324,38 @@ class _TempoTable extends ConsumerWidget {
           const CoreDivider(),
         ],
       ],
+    );
+  }
+}
+
+class _ExportRow extends ConsumerStatefulWidget {
+  const _ExportRow();
+
+  @override
+  ConsumerState<_ExportRow> createState() => _ExportRowState();
+}
+
+class _ExportRowState extends ConsumerState<_ExportRow> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return CoreButton.primary(
+      label: 'Export PDF report',
+      leading: Icons.picture_as_pdf_outlined,
+      fullWidth: true,
+      size: CoreButtonSize.lg,
+      loading: _busy,
+      onPressed: () async {
+        setState(() => _busy = true);
+        try {
+          await exportPracticeReport(ref);
+        } finally {
+          // Restored even if the share sheet throws or the user cancels —
+          // a button stuck in its loading state is worse than no feedback.
+          if (mounted) setState(() => _busy = false);
+        }
+      },
     );
   }
 }
