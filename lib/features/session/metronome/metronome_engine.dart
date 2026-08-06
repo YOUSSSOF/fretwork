@@ -73,6 +73,13 @@ class SoLoudMetronome implements MetronomeEngine {
   AudioSource? _beat;
   MetronomeSound? _loaded;
 
+  /// Set when the audio backend cannot be reached at all — no native library
+  /// (a unit-test VM, an unsupported desktop target) or a device that refuses
+  /// to open an output. The engine then degrades to silence rather than
+  /// throwing: the timing grid, the visual pulse and — crucially — the tempo
+  /// tracking the analytics depend on all keep working without sound.
+  bool _unavailable = false;
+
   static String _assetFor(MetronomeSound sound, BeatKind kind) {
     final stem = switch (sound) {
       MetronomeSound.click => 'click',
@@ -85,30 +92,45 @@ class SoLoudMetronome implements MetronomeEngine {
 
   @override
   Future<void> load(MetronomeSound sound) async {
+    if (_unavailable) return;
     if (_loaded == sound && _accent != null) return;
 
-    final soloud = SoLoud.instance;
-    if (!soloud.isInitialized) {
-      // A short buffer keeps the gap between "play" and "audible" small; the
-      // clicks are tiny, so the memory cost is nothing.
-      await soloud.init(bufferSize: 256);
-    }
+    try {
+      final soloud = SoLoud.instance;
+      if (!soloud.isInitialized) {
+        // A short buffer keeps the gap between "play" and "audible" small; the
+        // clicks are tiny, so the memory cost is nothing.
+        await soloud.init(bufferSize: 256);
+      }
 
-    await _release();
-    // Both samples are preloaded: loading on the first beat would make the
-    // first click of every session late, which is the one that matters most.
-    _accent = await soloud.loadAsset(_assetFor(sound, BeatKind.accent));
-    _beat = await soloud.loadAsset(_assetFor(sound, BeatKind.beat));
-    _loaded = sound;
+      await _release();
+      // Both samples are preloaded: loading on the first beat would make the
+      // first click of every session late, which is the one that matters most.
+      _accent = await soloud.loadAsset(_assetFor(sound, BeatKind.accent));
+      _beat = await soloud.loadAsset(_assetFor(sound, BeatKind.beat));
+      _loaded = sound;
+    } on Object catch (error) {
+      // Deliberately broad: the failure modes here span an FFI ArgumentError
+      // for a missing native library, plugin exceptions, and SoLoud's own
+      // errors, and none of them should be able to stop a practice session.
+      _unavailable = true;
+      debugPrint('Metronome audio unavailable, continuing silently: $error');
+    }
   }
 
   @override
   Future<void> play(BeatKind kind) async {
+    if (_unavailable) return;
     final source = kind == BeatKind.accent ? _accent : _beat;
     if (source == null) return;
-    // `play` returns a handle synchronously rather than a Future — the sound
-    // is already scheduled by the time it returns.
-    SoLoud.instance.play(source);
+    try {
+      // `play` returns a handle synchronously rather than a Future — the sound
+      // is already scheduled by the time it returns.
+      SoLoud.instance.play(source);
+    } on Object catch (error) {
+      _unavailable = true;
+      debugPrint('Metronome playback failed, continuing silently: $error');
+    }
   }
 
   Future<void> _release() async {
@@ -123,7 +145,12 @@ class SoLoudMetronome implements MetronomeEngine {
 
   @override
   Future<void> dispose() async {
-    await _release();
+    if (_unavailable) return;
+    try {
+      await _release();
+    } on Object catch (error) {
+      debugPrint('Metronome teardown failed: $error');
+    }
   }
 }
 

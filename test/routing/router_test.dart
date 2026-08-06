@@ -9,6 +9,8 @@ import 'package:fretwork/features/library/library_screen.dart';
 import 'package:fretwork/features/onboarding/onboarding_screen.dart';
 import 'package:fretwork/features/progress/progress_controller.dart';
 import 'package:fretwork/features/routine/routine_screen.dart';
+import 'package:fretwork/features/session/metronome/metronome_controller.dart';
+import 'package:fretwork/features/session/metronome/metronome_engine.dart';
 import 'package:fretwork/features/session/session_controller.dart';
 import 'package:fretwork/features/settings/settings_screen.dart';
 import 'package:fretwork/features/shell/app_shell.dart';
@@ -20,7 +22,11 @@ Future<ProviderContainer> _pumpApp(
   WidgetTester tester, {
   bool onboarded = true,
 }) async {
-  final container = testContainer();
+  final container = testContainer(
+    overrides: [
+      metronomeEngineProvider.overrideWithValue(const SilentMetronome()),
+    ],
+  );
   if (onboarded) {
     await container
         .read(profileProvider.notifier)
