@@ -1,0 +1,18 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # A dropped await on a persistence call is a data-loss bug, not a style nit.
+    unawaited_futures: error
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_dynamic_calls
+    - directives_ordering
+    - prefer_const_declarations
+    - prefer_final_locals
+    - sort_child_properties_last
+    - unawaited_futures
+    - unnecessary_parenthesis
+    - use_super_parameters
