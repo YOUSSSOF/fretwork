@@ -1,17 +1,51 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fretwork/core/models/preferences.dart';
 import 'package:fretwork/core/motion/motion_scope.dart';
 import 'package:fretwork/core/theme/app_theme.dart';
+import 'package:fretwork/features/history/history_controller.dart';
 import 'package:fretwork/features/settings/preferences_controller.dart';
 import 'package:fretwork/router.dart';
 
-class FretworkApp extends ConsumerWidget {
+class FretworkApp extends ConsumerStatefulWidget {
   const FretworkApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FretworkApp> createState() => _FretworkAppState();
+}
+
+class _FretworkAppState extends ConsumerState<FretworkApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // Backfill runs on launch and on every resume: the day can roll over while
+    // the app sits in the background, and a missed day that is never recorded
+    // silently improves the user's adherence.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _rollover());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _rollover();
+  }
+
+  void _rollover() {
+    unawaited(ref.read(historyRolloverProvider).run());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final prefs = ref.watch(preferencesProvider);
     SystemChrome.setSystemUIOverlayStyle(AppTheme.overlayStyle(prefs));
 
