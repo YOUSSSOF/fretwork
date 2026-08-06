@@ -18,15 +18,15 @@ library;
 import 'package:fretwork/core/models/exercise.dart';
 import 'package:fretwork/core/models/practice_category.dart';
 
-/// Free play is the app author's own addition, not part of the course. It is
-/// unlocked from the moment there is anything to apply, and it never
-/// disappears from the weights: technique that is never used musically stays
-/// locked in the practice room.
+/// Free play is the app author's own addition, not part of the course. It
+/// unlocks at the very first milestone — someone who has only read the preface
+/// still owns a guitar — and it never disappears from the weights, because
+/// technique that is never used musically stays locked in the practice room.
 const CoursePart kFreePlayPart = CoursePart(
   id: 'part_free',
   order: 99,
   label: 'Free play',
-  milestone: 2,
+  milestone: 1,
   blurb: 'Unstructured playing time. Always in the routine, never assessed.',
   exercises: [
     Exercise(

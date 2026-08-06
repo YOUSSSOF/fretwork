@@ -113,8 +113,8 @@ void main() {
       expect(covered, containsAll(PracticeCategory.values));
     });
 
-    test('free play is available from the first practising milestone', () {
-      expect(kFreePlayPart.milestone, 2);
+    test('free play is available from the very first milestone', () {
+      expect(kFreePlayPart.milestone, 1);
       expect(kFreePlayPart.exercises, isNotEmpty);
     });
 
