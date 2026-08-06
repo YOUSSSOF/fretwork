@@ -9,6 +9,7 @@ import 'package:fretwork/features/library/library_screen.dart';
 import 'package:fretwork/features/onboarding/onboarding_screen.dart';
 import 'package:fretwork/features/progress/progress_controller.dart';
 import 'package:fretwork/features/routine/routine_screen.dart';
+import 'package:fretwork/features/session/session_controller.dart';
 import 'package:fretwork/features/settings/settings_screen.dart';
 import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:fretwork/router.dart';
@@ -133,10 +134,17 @@ void main() {
     addTearDown(container.dispose);
 
     container.read(routerProvider).go(Routes.session);
-    await tester.pumpAndSettle();
+    // Not pumpAndSettle: the session screen runs a continuous ticker for the
+    // ring and an ambient glow, so nothing ever settles there by design.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text('Home'), findsNothing);
     expect(find.text('Routine'), findsNothing);
+
+    // Stop the session's timers before the framework's pending-timer check.
+    await container.read(sessionProvider.notifier).end();
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets('the debug gallery is reachable before onboarding', (

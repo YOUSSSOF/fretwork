@@ -3,6 +3,10 @@ import 'package:fretwork/core/data/document_store.dart';
 import 'package:fretwork/core/data/providers.dart';
 import 'package:fretwork/core/utils/clock.dart';
 
+/// Convenience for tests that drive the clock themselves.
+Override clockProviderOverride(Clock clock) =>
+    clockProvider.overrideWithValue(clock);
+
 /// A container wired to an in-memory store and a pinned clock.
 ///
 /// Synchronous by design: widget tests run on a fake clock that never completes
