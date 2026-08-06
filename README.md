@@ -7,7 +7,7 @@
 **An offline guitar practice companion that turns a technique curriculum into a
 daily routine, a session timer, and an honest record of what you actually did.**
 
-`Flutter 3.41` · `Dart 3.11` · `Android + iOS` · `342 tests` · `no network`
+`Flutter 3.41` · `Dart 3.11` · `Android + iOS` · `354 tests` · `no network`
 
 </div>
 
@@ -55,10 +55,16 @@ density minimum, and never ellipsizes — 80 tests hold it to that across
 320/390/430/768 dp, 2–24 items and three densities.
 
 **Tablature you can actually read.** A `CustomPaint` stave renderer with the
-string lines knocked out behind each fret number, slurs arcing between hammered
-notes, bend arrows, slides and palm-mute brackets. It reads tab you paste in
-standard ASCII form, previews it live as you type, and stores it per exercise or
-per variant. The app ships no notation of its own — see *Content* below.
+string lines knocked out behind each fret number, stems and beams under the
+stave, dots, triplet brackets, slurs arcing between hammered notes, bend arrows,
+slides and palm-mute marks. Rhythm is the part ASCII tab cannot express and the
+main reason it reads worse than engraved tab, so the model carries note values
+and the renderer draws them.
+
+Two ways in: tap a string then a fret on a pad — which is the only realistic way
+to transcribe on a phone — or paste ASCII tab and watch it render live. Bar
+lines are derived from the rhythm rather than counted by hand. Stored per
+exercise or per variant. The app ships no notation of its own — see *Content*.
 
 **Empty days are data.** Every day between launches gets a record, so the
 calendar shows the days you missed instead of leaving them blank, and adherence
@@ -103,7 +109,7 @@ dart run tool/generate_icon.dart && dart run flutter_launcher_icons
 ```
 
 ```bash
-flutter test          # 342 tests
+flutter test          # 354 tests
 dart analyze          # clean
 flutter build apk --release
 ```
@@ -144,14 +150,14 @@ descriptions written for this app. No notation, no tablature, no scans. Each
 exercise shows a page reference and the book stays open next to the phone —
 that is the intended workflow, not a limitation.
 
-Tablature works the same way: the renderer and the editor are part of the app,
-but the transcriptions are yours. Nothing ships in the `tabs` box, and Fretwork
-will not reproduce a published tab book — paste in what you have transcribed
-from material you own and it will be drawn properly.
+Tablature works the same way: the renderer and both editors are part of the app,
+the transcriptions are yours. Nothing ships in the `tabs` box.
 
-**The page and CD-track numbers in `course_seed.dart` are placeholders.** They
-are sequential and plausible, not transcribed from a copy of the book. Correct
-them against your own copy and bump `kSeedVersion` in `bootstrap.dart`.
+**Page numbers are real now.** `score_index.dart` maps every exercise to its
+page, indexed from the section headings of a scanned copy — so "Book p. 17"
+turns to the right page. A few examples that begin mid-page may be one out. CD
+track numbers are still sequential guesses; correct them and bump `kSeedVersion`
+in `bootstrap.dart`.
 
 ## Known gaps
 

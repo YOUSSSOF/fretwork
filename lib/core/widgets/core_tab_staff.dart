@@ -33,7 +33,7 @@ class CoreTabStaff extends StatelessWidget {
   final bool showTuning;
 
   static const double _headroom = 26;
-  static const double _footroom = 20;
+  static const double _footroom = 42;
   static const double _gutter = 26;
   static const double _measureGap = 12;
 
@@ -136,10 +136,14 @@ class _TabPainter extends CustomPainter {
     var x = left + Sp.sm;
     for (var m = 0; m < tablature.measures.length; m++) {
       _paintBarLine(canvas, x - Sp.sm / 2);
-      for (final column in tablature.measures[m].columns) {
+      final columns = tablature.measures[m].columns;
+      final origin = x;
+      for (final column in columns) {
         _paintColumn(canvas, column, x);
         x += columnWidth;
       }
+      // Rhythm is drawn after the notes so beams sit on top of the stems.
+      _paintRhythm(canvas, columns, origin);
       x += _measureGap;
     }
     _paintBarLine(canvas, x - _measureGap, heavy: true);
@@ -313,6 +317,122 @@ class _TabPainter extends CustomPainter {
         ..strokeWidth = 1.1
         ..color = markStyle.color!,
     );
+  }
+
+  /// The rhythm line under the stave: stems, beams, flags, dots and triplet
+  /// brackets. This is what makes it readable as music rather than as a grid
+  /// of fret numbers.
+  void _paintRhythm(Canvas canvas, List<TabColumn> columns, double origin) {
+    if (columns.isEmpty) return;
+
+    final top = _yFor(0) + 8;
+    final base = top + 18;
+    final paint = Paint()
+      ..color = strongLine
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round;
+
+    for (var i = 0; i < columns.length; i++) {
+      final column = columns[i];
+      if (column.isEmpty) continue;
+      final x = origin + i * columnWidth;
+
+      if (!column.duration.hasStem) continue;
+      canvas.drawLine(Offset(x, top), Offset(x, base), paint);
+
+      if (column.dotted) {
+        canvas.drawCircle(
+          Offset(x + 4, base - 2),
+          1.4,
+          Paint()..color = strongLine,
+        );
+      }
+
+      final flags = column.duration.flags;
+      if (flags == 0) continue;
+
+      // Beam to the next column when it carries the same number of flags,
+      // otherwise draw free flags. Real engraving beams by beat; this beams by
+      // run, which reads correctly for the scale and picking figures this app
+      // is used for.
+      final next = i + 1 < columns.length ? columns[i + 1] : null;
+      final beamsRight =
+          next != null && !next.isEmpty && next.duration.flags == flags;
+
+      for (var f = 0; f < flags; f++) {
+        final y = base - f * 4;
+        if (beamsRight) {
+          canvas.drawLine(
+            Offset(x, y),
+            Offset(x + columnWidth, y),
+            paint..strokeWidth = 2.4,
+          );
+        } else {
+          final previous = i > 0 ? columns[i - 1] : null;
+          final beamedFromLeft =
+              previous != null &&
+              !previous.isEmpty &&
+              previous.duration.flags == flags;
+          if (!beamedFromLeft) {
+            // A lone flag, hooked forward off the stem.
+            final hook = Path()
+              ..moveTo(x, y)
+              ..quadraticBezierTo(x + 7, y - 1, x + 6, y - 7);
+            canvas.drawPath(
+              hook,
+              Paint()
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = 1.6
+                ..color = strongLine,
+            );
+          }
+        }
+      }
+      paint.strokeWidth = 1.2;
+    }
+
+    _paintTripletBrackets(canvas, columns, origin, base);
+  }
+
+  void _paintTripletBrackets(
+    Canvas canvas,
+    List<TabColumn> columns,
+    double origin,
+    double base,
+  ) {
+    var start = -1;
+    for (var i = 0; i <= columns.length; i++) {
+      final isTriplet = i < columns.length && columns[i].triplet;
+      if (isTriplet && start < 0) start = i;
+      if (!isTriplet && start >= 0) {
+        final from = origin + start * columnWidth;
+        final to = origin + (i - 1) * columnWidth;
+        final y = base + 8;
+        canvas.drawLine(
+          Offset(from, y),
+          Offset(to, y),
+          Paint()
+            ..color = markStyle.color!
+            ..strokeWidth = 1,
+        );
+        final painter = _text('3', markStyle);
+        final mid = (from + to) / 2;
+        canvas.drawRect(
+          Rect.fromCenter(
+            center: Offset(mid, y),
+            width: painter.width + 4,
+            height: painter.height,
+          ),
+          Paint()..color = surface,
+        );
+        painter.paint(
+          canvas,
+          Offset(mid - painter.width / 2, y - painter.height / 2),
+        );
+        painter.dispose();
+        start = -1;
+      }
+    }
   }
 
   TextPainter _text(String value, TextStyle style) => TextPainter(

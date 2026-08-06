@@ -9,6 +9,7 @@ import 'package:fretwork/core/widgets/core_tab_staff.dart';
 import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/library/tab/ascii_tab_parser.dart';
 import 'package:fretwork/features/library/tab/tab_controller.dart';
+import 'package:fretwork/features/library/tab/tab_grid_editor.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 /// The tablature panel on an exercise.
@@ -148,28 +149,33 @@ class _TabEditor extends StatefulWidget {
   State<_TabEditor> createState() => _TabEditorState();
 }
 
-class _TabEditorState extends State<_TabEditor> {
+class _TabEditorState extends State<_TabEditor>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabs = TabController(length: 2, vsync: this);
   late final TextEditingController _controller = TextEditingController(
     text: widget.initial == null ? _template : toAsciiTab(widget.initial!),
   );
   TabParseResult? _result;
+  Tablature? _grid;
 
-  static const String _template = '''
+  static const String _template = """
 e|------------------------|
 B|------------------------|
 G|------------------------|
 D|------------------------|
 A|------------------------|
-E|------------------------|''';
+E|------------------------|""";
 
   @override
   void initState() {
     super.initState();
+    _grid = widget.initial;
     _parse();
   }
 
   @override
   void dispose() {
+    _tabs.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -180,74 +186,98 @@ E|------------------------|''';
     });
   }
 
+  /// Whichever pane the user is on is the one that gets saved.
+  Tablature? get _saveable => _tabs.index == 0 ? _grid : _result?.tablature;
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     final result = _result;
-    final parsed = result?.tablature;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const CoreText.bodySm(
-          'Paste standard ASCII tab — six lines, dashes for time, numbers for '
-          'frets. Marks between notes are read too: h, p, b, ~, / and \\.',
-        ),
-        const SizedBox(height: Sp.md),
-        TextField(
-          controller: _controller,
-          onChanged: (_) => _parse(),
-          maxLines: 8,
-          style: TextStyle(
-            color: colors.textPrimary,
-            fontFamily: 'monospace',
-            fontSize: 12,
-            height: 1.35,
-          ),
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: colors.surface1,
-            border: OutlineInputBorder(
-              borderRadius: Rd.none,
-              borderSide: BorderSide(color: colors.border),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: Rd.none,
-              borderSide: BorderSide(color: colors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: Rd.none,
-              borderSide: BorderSide(color: colors.accentStrong),
-            ),
-          ),
+        TabBar(
+          controller: _tabs,
+          onTap: (_) => setState(() {}),
+          indicatorColor: colors.accentStrong,
+          indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: colors.border,
+          labelColor: colors.textPrimary,
+          unselectedLabelColor: colors.textSecondary,
+          tabs: const [
+            Tab(text: 'Tap it in'),
+            Tab(text: 'Paste ASCII'),
+          ],
         ),
         const SizedBox(height: Sp.lg),
-        // Live preview: what is typed is drawn as it will appear, so a
-        // mistyped column is obvious before it is saved.
-        if (result != null && !result.isSuccess)
-          Container(
-            padding: const EdgeInsets.all(Sp.md),
-            decoration: BoxDecoration(
-              color: colors.danger.withValues(alpha: 0.10),
-              border: Border.all(color: colors.danger.withValues(alpha: 0.4)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                for (final error in result.errors)
-                  CoreText.bodySm(error, color: colors.danger),
-              ],
-            ),
+        if (_tabs.index == 0)
+          TabGridEditor(
+            initial: _grid ?? Tablature(key: widget.tabKey, measures: const []),
+            onChanged: (tab) => setState(() => _grid = tab),
           )
-        else if (parsed != null) ...[
-          const CoreText.label('PREVIEW'),
-          const SizedBox(height: Sp.sm),
-          CoreTabStaff(tablature: parsed),
-          for (final warning in result!.warnings)
-            Padding(
-              padding: const EdgeInsets.only(top: Sp.xs),
-              child: CoreText.caption(warning, color: colors.textTertiary),
+        else ...[
+          const CoreText.bodySm(
+            'Paste standard ASCII tab — six lines, dashes for time, numbers '
+            'for frets. Marks between notes are read too: h, p, b, ~, / and '
+            r'\.',
+          ),
+          const SizedBox(height: Sp.md),
+          TextField(
+            controller: _controller,
+            onChanged: (_) => _parse(),
+            maxLines: 8,
+            style: TextStyle(
+              color: colors.textPrimary,
+              fontFamily: 'monospace',
+              fontSize: 12,
+              height: 1.35,
             ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: colors.surface1,
+              border: OutlineInputBorder(
+                borderRadius: Rd.none,
+                borderSide: BorderSide(color: colors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: Rd.none,
+                borderSide: BorderSide(color: colors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: Rd.none,
+                borderSide: BorderSide(color: colors.accentStrong),
+              ),
+            ),
+          ),
+          const SizedBox(height: Sp.lg),
+          // Live preview: what is typed is drawn as it will appear, so a
+          // mistyped column is obvious before it is saved.
+          if (result != null && !result.isSuccess)
+            Container(
+              padding: const EdgeInsets.all(Sp.md),
+              decoration: BoxDecoration(
+                color: colors.danger.withValues(alpha: 0.10),
+                border: Border.all(color: colors.danger.withValues(alpha: 0.4)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final error in result.errors)
+                    CoreText.bodySm(error, color: colors.danger),
+                ],
+              ),
+            )
+          else if (result?.tablature != null) ...[
+            const CoreText.label('PREVIEW'),
+            const SizedBox(height: Sp.sm),
+            CoreTabStaff(tablature: result!.tablature!),
+            for (final warning in result.warnings)
+              Padding(
+                padding: const EdgeInsets.only(top: Sp.xs),
+                child: CoreText.caption(warning, color: colors.textTertiary),
+              ),
+          ],
         ],
         const SizedBox(height: Sp.lg),
         Row(
@@ -266,7 +296,9 @@ E|------------------------|''';
               child: CoreButton.primary(
                 label: 'Save tab',
                 fullWidth: true,
-                onPressed: parsed == null ? null : () => widget.onSaved(parsed),
+                onPressed: (_saveable?.isEmpty ?? true)
+                    ? null
+                    : () => widget.onSaved(_saveable!),
               ),
             ),
           ],

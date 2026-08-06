@@ -104,24 +104,102 @@ class TabNote {
   int get hashCode => Object.hash(string, fret, articulation, muted);
 }
 
+/// How long a column lasts.
+///
+/// ASCII tab cannot express this at all, which is the single biggest reason it
+/// reads worse than engraved tab: without stems and beams you cannot tell a
+/// run of sixteenths from a run of quarters.
+enum TabDuration {
+  whole(4, 0),
+  half(2, 0),
+  quarter(1, 0),
+  eighth(0.5, 1),
+  sixteenth(0.25, 2),
+  thirtySecond(0.125, 3);
+
+  const TabDuration(this.beats, this.flags);
+
+  /// Length in quarter-note beats.
+  final double beats;
+
+  /// Number of beams or flags drawn on the stem.
+  final int flags;
+
+  String get label => switch (this) {
+    TabDuration.whole => 'whole',
+    TabDuration.half => 'half',
+    TabDuration.quarter => '1/4',
+    TabDuration.eighth => '1/8',
+    TabDuration.sixteenth => '1/16',
+    TabDuration.thirtySecond => '1/32',
+  };
+
+  /// Stems are only drawn from a half note down; a whole note has none.
+  bool get hasStem => this != TabDuration.whole;
+}
+
 /// Everything sounding at one point in time — one note, or a chord.
 @immutable
 class TabColumn {
-  const TabColumn({this.notes = const [], this.palmMuted = false});
+  const TabColumn({
+    this.notes = const [],
+    this.palmMuted = false,
+    this.duration = TabDuration.eighth,
+    this.dotted = false,
+    this.triplet = false,
+  });
 
   final List<TabNote> notes;
   final bool palmMuted;
+  final TabDuration duration;
+
+  /// Adds half again to the length.
+  final bool dotted;
+
+  /// Part of a triplet grouping — three in the space of two.
+  final bool triplet;
 
   bool get isEmpty => notes.isEmpty;
+
+  double get beats {
+    var value = duration.beats;
+    if (dotted) value *= 1.5;
+    if (triplet) value *= 2 / 3;
+    return value;
+  }
+
+  TabColumn copyWith({
+    List<TabNote>? notes,
+    bool? palmMuted,
+    TabDuration? duration,
+    bool? dotted,
+    bool? triplet,
+  }) => TabColumn(
+    notes: notes ?? this.notes,
+    palmMuted: palmMuted ?? this.palmMuted,
+    duration: duration ?? this.duration,
+    dotted: dotted ?? this.dotted,
+    triplet: triplet ?? this.triplet,
+  );
 
   Map<String, Object?> toJson() => {
     'notes': [for (final note in notes) note.toJson()],
     if (palmMuted) 'palmMuted': true,
+    'duration': duration.name,
+    if (dotted) 'dotted': true,
+    if (triplet) 'triplet': true,
   };
 
   factory TabColumn.fromJson(Map<String, Object?> json) => TabColumn(
     notes: listFromJson(json['notes'], TabNote.fromJson),
     palmMuted: boolFromJson(json['palmMuted'], false),
+    duration: enumFromName(
+      TabDuration.values,
+      json['duration'],
+      TabDuration.eighth,
+    ),
+    dotted: boolFromJson(json['dotted'], false),
+    triplet: boolFromJson(json['triplet'], false),
   );
 
   @override
@@ -129,10 +207,14 @@ class TabColumn {
       identical(this, other) ||
       other is TabColumn &&
           listEquals(other.notes, notes) &&
-          other.palmMuted == palmMuted;
+          other.palmMuted == palmMuted &&
+          other.duration == duration &&
+          other.dotted == dotted &&
+          other.triplet == triplet;
 
   @override
-  int get hashCode => Object.hash(Object.hashAll(notes), palmMuted);
+  int get hashCode =>
+      Object.hash(Object.hashAll(notes), palmMuted, duration, dotted, triplet);
 }
 
 @immutable

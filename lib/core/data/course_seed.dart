@@ -7,12 +7,12 @@
 /// detail screen shows a page reference and the book stays open next to the
 /// phone — that is the intended workflow, not a limitation.
 ///
-/// **Page and CD-track numbers are placeholders.** They are sequential and
-/// plausible, not transcribed from a copy of the book, because this seed was
-/// authored without one. They are correct in *shape* — every exercise has a
-/// pointer, and the pointers ascend — but the owner should correct the values
-/// against their own copy before relying on them. Bump [kSeedVersion] in
-/// `bootstrap.dart` when they are edited.
+/// **Page numbers are real; CD-track numbers are still placeholders.** The
+/// page pointers were indexed from the section headings of the owner's scanned
+/// copy — see `score_index.dart` — so "Book p. 17" turns to the right page. A
+/// few examples that begin mid-page may be one out. The track numbers are
+/// still sequential guesses. Bump [kSeedVersion] in `bootstrap.dart` when
+/// either is edited.
 library;
 
 import 'package:fretwork/core/models/exercise.dart';
@@ -134,7 +134,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 4,
         position: '5th position',
         estimatedMinutes: 4,
-        bookPage: 12,
+        bookPage: 2,
         cdTrack: 1,
         variants: [
           ExerciseVariant(
@@ -142,28 +142,28 @@ const List<CoursePart> kCourseParts = [
             label: 'Part A',
             kind: VariantKind.part,
             note: 'Ascending, 1-2-3-4 on every string.',
-            bookPage: 12,
+            bookPage: 2,
           ),
           ExerciseVariant(
             id: 'ex_1_part_b',
             label: 'Part B',
             kind: VariantKind.part,
             note: 'Descending, 4-3-2-1 on every string.',
-            bookPage: 12,
+            bookPage: 2,
           ),
           ExerciseVariant(
             id: 'ex_1_part_c',
             label: 'Part C',
             kind: VariantKind.part,
             note: 'Ascending across strings, descending down the neck.',
-            bookPage: 13,
+            bookPage: 2,
           ),
           ExerciseVariant(
             id: 'ex_1_part_d',
             label: 'Part D',
             kind: VariantKind.part,
             note: 'Mixed direction, changing position each pass.',
-            bookPage: 13,
+            bookPage: 2,
           ),
         ],
         tips: [
@@ -191,7 +191,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 2,
         position: '5th position',
         estimatedMinutes: 3,
-        bookPage: 14,
+        bookPage: 3,
         cdTrack: 2,
         variants: [
           ExerciseVariant(
@@ -199,14 +199,14 @@ const List<CoursePart> kCourseParts = [
             label: 'Part A',
             kind: VariantKind.part,
             note: 'Adjacent pairs: 1-2, 2-3, 3-4.',
-            bookPage: 14,
+            bookPage: 3,
           ),
           ExerciseVariant(
             id: 'ex_2_part_b',
             label: 'Part B',
             kind: VariantKind.part,
             note: 'Split pairs: 1-3, 2-4, 1-4.',
-            bookPage: 15,
+            bookPage: 3,
           ),
         ],
         tips: [
@@ -232,7 +232,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 4,
         position: 'Moving',
         estimatedMinutes: 4,
-        bookPage: 16,
+        bookPage: 4,
         cdTrack: 3,
         tips: [
           'Start at the 9th fret where the stretch is easy and work back toward '
@@ -273,7 +273,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 200,
         subdivision: 4,
         estimatedMinutes: 5,
-        bookPage: 20,
+        bookPage: 5,
         cdTrack: 4,
         variants: [
           ExerciseVariant(
@@ -281,28 +281,28 @@ const List<CoursePart> kCourseParts = [
             label: 'Base',
             kind: VariantKind.part,
             note: 'Down-stroke start, one string at a time.',
-            bookPage: 20,
+            bookPage: 5,
           ),
           ExerciseVariant(
             id: 'ex_4_var_1',
             label: 'Variation 1',
             kind: VariantKind.variation,
             note: 'Up-stroke start. Harder than it looks.',
-            bookPage: 21,
+            bookPage: 5,
           ),
           ExerciseVariant(
             id: 'ex_4_var_2',
             label: 'Variation 2',
             kind: VariantKind.variation,
             note: 'Two strings, crossing on every fourth note.',
-            bookPage: 21,
+            bookPage: 5,
           ),
           ExerciseVariant(
             id: 'ex_4_var_3',
             label: 'Variation 3',
             kind: VariantKind.variation,
             note: 'String skipping — skip one string on each crossing.',
-            bookPage: 22,
+            bookPage: 5,
           ),
         ],
         tips: [
@@ -341,7 +341,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 180,
         subdivision: 4,
         estimatedMinutes: 4,
-        bookPage: 26,
+        bookPage: 9,
         cdTrack: 5,
         variants: [
           ExerciseVariant(
@@ -349,14 +349,14 @@ const List<CoursePart> kCourseParts = [
             label: 'Part A',
             kind: VariantKind.part,
             note: 'One note per pick stroke, single string.',
-            bookPage: 26,
+            bookPage: 9,
           ),
           ExerciseVariant(
             id: 'ex_5_part_b',
             label: 'Part B',
             kind: VariantKind.part,
             note: 'Across strings, watching the crossing point.',
-            bookPage: 27,
+            bookPage: 9,
           ),
         ],
         tips: [
@@ -381,7 +381,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 200,
         subdivision: 4,
         estimatedMinutes: 4,
-        bookPage: 28,
+        bookPage: 10,
         cdTrack: 6,
         variants: [
           ExerciseVariant(
@@ -389,14 +389,14 @@ const List<CoursePart> kCourseParts = [
             label: 'Part A',
             kind: VariantKind.part,
             note: 'Eighths to sixteenths and back.',
-            bookPage: 28,
+            bookPage: 10,
           ),
           ExerciseVariant(
             id: 'ex_6_part_b',
             label: 'Part B',
             kind: VariantKind.part,
             note: 'Adds triplets to the ladder.',
-            bookPage: 29,
+            bookPage: 10,
           ),
         ],
       ),
@@ -430,7 +430,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 140,
         subdivision: 4,
         estimatedMinutes: 4,
-        bookPage: 34,
+        bookPage: 10,
         cdTrack: 7,
         tips: [
           'The tempo does not change. Only the number of notes between clicks '
@@ -459,7 +459,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 4,
         position: '5th position',
         estimatedMinutes: 6,
-        bookPage: 36,
+        bookPage: 11,
         cdTrack: 8,
         variants: [
           ExerciseVariant(
@@ -468,7 +468,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'P1',
             kind: VariantKind.part,
             note: '1-2-3-4',
-            bookPage: 36,
+            bookPage: 11,
           ),
           ExerciseVariant(
             id: 'ex_8_part_2',
@@ -476,7 +476,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'P2',
             kind: VariantKind.part,
             note: '1-3-2-4',
-            bookPage: 36,
+            bookPage: 11,
           ),
           ExerciseVariant(
             id: 'ex_8_part_3',
@@ -484,7 +484,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'P3',
             kind: VariantKind.part,
             note: '1-4-2-3',
-            bookPage: 37,
+            bookPage: 11,
           ),
           ExerciseVariant(
             id: 'ex_8_part_4',
@@ -492,7 +492,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'P4',
             kind: VariantKind.part,
             note: '2-1-4-3',
-            bookPage: 37,
+            bookPage: 11,
           ),
           ExerciseVariant(
             id: 'ex_8_part_5',
@@ -500,7 +500,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'P5',
             kind: VariantKind.part,
             note: '4-3-2-1',
-            bookPage: 38,
+            bookPage: 11,
           ),
           ExerciseVariant(
             id: 'ex_8_part_6',
@@ -508,7 +508,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'P6',
             kind: VariantKind.part,
             note: '3-4-1-2',
-            bookPage: 38,
+            bookPage: 11,
           ),
         ],
         tips: [
@@ -537,7 +537,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 220,
         subdivision: 4,
         estimatedMinutes: 6,
-        bookPage: 40,
+        bookPage: 12,
         cdTrack: 9,
         variants: [
           ExerciseVariant(
@@ -546,7 +546,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'Dev 1A',
             kind: VariantKind.development,
             note: 'Chromatic, ascending only.',
-            bookPage: 40,
+            bookPage: 12,
           ),
           ExerciseVariant(
             id: 'ex_9_dev_1b',
@@ -554,7 +554,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'Dev 1B',
             kind: VariantKind.development,
             note: 'Chromatic, descending only.',
-            bookPage: 40,
+            bookPage: 12,
           ),
           ExerciseVariant(
             id: 'ex_9_dev_1c',
@@ -562,7 +562,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'Dev 1C',
             kind: VariantKind.development,
             note: 'Diatonic, ascending.',
-            bookPage: 41,
+            bookPage: 12,
           ),
           ExerciseVariant(
             id: 'ex_9_dev_1d',
@@ -570,7 +570,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'Dev 1D',
             kind: VariantKind.development,
             note: 'Diatonic, descending.',
-            bookPage: 41,
+            bookPage: 12,
           ),
           ExerciseVariant(
             id: 'ex_9_dev_2',
@@ -579,7 +579,7 @@ const List<CoursePart> kCourseParts = [
             kind: VariantKind.development,
             note: 'Accelerate and decelerate through the pattern.',
             tempo: 90,
-            bookPage: 42,
+            bookPage: 12,
           ),
           ExerciseVariant(
             id: 'ex_9_dev_3',
@@ -588,7 +588,7 @@ const List<CoursePart> kCourseParts = [
             kind: VariantKind.development,
             note: 'Bursts: moderate tempo with short fast flurries.',
             tempo: 96,
-            bookPage: 43,
+            bookPage: 12,
           ),
           ExerciseVariant(
             id: 'ex_9_dev_4',
@@ -596,7 +596,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'Dev 4',
             kind: VariantKind.development,
             note: 'Recombination of the previous developments.',
-            bookPage: 44,
+            bookPage: 12,
           ),
         ],
       ),
@@ -617,7 +617,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 200,
         subdivision: 4,
         estimatedMinutes: 5,
-        bookPage: 46,
+        bookPage: 14,
         cdTrack: 10,
       ),
     ],
@@ -652,7 +652,7 @@ const List<CoursePart> kCourseParts = [
         keyCenter: 'G major',
         position: '4th position',
         estimatedMinutes: 8,
-        bookPage: 52,
+        bookPage: 17,
         cdTrack: 11,
         variants: [
           ExerciseVariant(
@@ -660,126 +660,126 @@ const List<CoursePart> kCourseParts = [
             label: 'Fragment 1',
             shortLabel: 'Frag 1',
             kind: VariantKind.fragment,
-            bookPage: 52,
+            bookPage: 17,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_02',
             label: 'Fragment 2',
             shortLabel: 'Frag 2',
             kind: VariantKind.fragment,
-            bookPage: 52,
+            bookPage: 17,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_03',
             label: 'Fragment 3',
             shortLabel: 'Frag 3',
             kind: VariantKind.fragment,
-            bookPage: 52,
+            bookPage: 17,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_04',
             label: 'Fragment 4',
             shortLabel: 'Frag 4',
             kind: VariantKind.fragment,
-            bookPage: 53,
+            bookPage: 17,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_05',
             label: 'Fragment 5',
             shortLabel: 'Frag 5',
             kind: VariantKind.fragment,
-            bookPage: 53,
+            bookPage: 17,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_06',
             label: 'Fragment 6',
             shortLabel: 'Frag 6',
             kind: VariantKind.fragment,
-            bookPage: 53,
+            bookPage: 17,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_07',
             label: 'Fragment 7',
             shortLabel: 'Frag 7',
             kind: VariantKind.fragment,
-            bookPage: 54,
+            bookPage: 18,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_08',
             label: 'Fragment 8',
             shortLabel: 'Frag 8',
             kind: VariantKind.fragment,
-            bookPage: 54,
+            bookPage: 18,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_09',
             label: 'Fragment 9',
             shortLabel: 'Frag 9',
             kind: VariantKind.fragment,
-            bookPage: 54,
+            bookPage: 18,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_10',
             label: 'Fragment 10',
             shortLabel: 'Frag 10',
             kind: VariantKind.fragment,
-            bookPage: 55,
+            bookPage: 18,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_11',
             label: 'Fragment 11',
             shortLabel: 'Frag 11',
             kind: VariantKind.fragment,
-            bookPage: 55,
+            bookPage: 18,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_12',
             label: 'Fragment 12',
             shortLabel: 'Frag 12',
             kind: VariantKind.fragment,
-            bookPage: 55,
+            bookPage: 18,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_13',
             label: 'Fragment 13',
             shortLabel: 'Frag 13',
             kind: VariantKind.fragment,
-            bookPage: 56,
+            bookPage: 19,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_14',
             label: 'Fragment 14',
             shortLabel: 'Frag 14',
             kind: VariantKind.fragment,
-            bookPage: 56,
+            bookPage: 19,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_15',
             label: 'Fragment 15',
             shortLabel: 'Frag 15',
             kind: VariantKind.fragment,
-            bookPage: 56,
+            bookPage: 19,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_16',
             label: 'Fragment 16',
             shortLabel: 'Frag 16',
             kind: VariantKind.fragment,
-            bookPage: 57,
+            bookPage: 19,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_17',
             label: 'Fragment 17',
             shortLabel: 'Frag 17',
             kind: VariantKind.fragment,
-            bookPage: 57,
+            bookPage: 20,
           ),
           ExerciseVariant(
             id: 'ex_11_frag_18',
             label: 'Fragment 18',
             shortLabel: 'Frag 18',
             kind: VariantKind.fragment,
-            bookPage: 57,
+            bookPage: 20,
           ),
           ExerciseVariant(
             id: 'ex_11_dev_1',
@@ -787,7 +787,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'Dev 1',
             kind: VariantKind.development,
             note: 'Fragments joined in pairs.',
-            bookPage: 58,
+            bookPage: 20,
           ),
           ExerciseVariant(
             id: 'ex_11_dev_2',
@@ -795,7 +795,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'Dev 2',
             kind: VariantKind.development,
             note: 'Fragments in reverse order.',
-            bookPage: 58,
+            bookPage: 20,
           ),
           ExerciseVariant(
             id: 'ex_11_dev_3',
@@ -803,7 +803,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'Dev 3',
             kind: VariantKind.development,
             note: 'Bursts across fragment boundaries.',
-            bookPage: 59,
+            bookPage: 21,
           ),
           ExerciseVariant(
             id: 'ex_11_dev_4',
@@ -811,7 +811,7 @@ const List<CoursePart> kCourseParts = [
             shortLabel: 'Dev 4',
             kind: VariantKind.development,
             note: 'Full recombination across the neck.',
-            bookPage: 59,
+            bookPage: 21,
           ),
         ],
         tips: [
@@ -839,7 +839,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 3,
         keyCenter: 'G major',
         estimatedMinutes: 5,
-        bookPage: 60,
+        bookPage: 21,
         cdTrack: 12,
       ),
       Exercise(
@@ -860,7 +860,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 4,
         keyCenter: 'G major',
         estimatedMinutes: 5,
-        bookPage: 62,
+        bookPage: 23,
         cdTrack: 13,
       ),
       Exercise(
@@ -882,7 +882,7 @@ const List<CoursePart> kCourseParts = [
         keyCenter: 'G major',
         position: 'Moving',
         estimatedMinutes: 5,
-        bookPage: 64,
+        bookPage: 26,
         cdTrack: 14,
       ),
       Exercise(
@@ -903,7 +903,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 4,
         keyCenter: 'G major',
         estimatedMinutes: 5,
-        bookPage: 66,
+        bookPage: 28,
         cdTrack: 15,
       ),
       Exercise(
@@ -928,7 +928,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 4,
         keyCenter: 'G major',
         estimatedMinutes: 5,
-        bookPage: 68,
+        bookPage: 29,
         cdTrack: 16,
       ),
     ],
@@ -962,7 +962,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 3,
         keyCenter: 'A minor',
         estimatedMinutes: 6,
-        bookPage: 74,
+        bookPage: 33,
         cdTrack: 17,
       ),
       Exercise(
@@ -983,7 +983,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 4,
         keyCenter: 'A minor',
         estimatedMinutes: 6,
-        bookPage: 78,
+        bookPage: 36,
         cdTrack: 18,
       ),
     ],
@@ -1016,7 +1016,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 190,
         subdivision: 4,
         estimatedMinutes: 6,
-        bookPage: 84,
+        bookPage: 37,
         cdTrack: 19,
         variants: [
           ExerciseVariant(
@@ -1024,42 +1024,42 @@ const List<CoursePart> kCourseParts = [
             label: 'Fragment 1',
             shortLabel: 'Frag 1',
             kind: VariantKind.fragment,
-            bookPage: 84,
+            bookPage: 37,
           ),
           ExerciseVariant(
             id: 'ex_19_frag_2',
             label: 'Fragment 2',
             shortLabel: 'Frag 2',
             kind: VariantKind.fragment,
-            bookPage: 84,
+            bookPage: 37,
           ),
           ExerciseVariant(
             id: 'ex_19_frag_3',
             label: 'Fragment 3',
             shortLabel: 'Frag 3',
             kind: VariantKind.fragment,
-            bookPage: 85,
+            bookPage: 37,
           ),
           ExerciseVariant(
             id: 'ex_19_frag_4',
             label: 'Fragment 4',
             shortLabel: 'Frag 4',
             kind: VariantKind.fragment,
-            bookPage: 85,
+            bookPage: 37,
           ),
           ExerciseVariant(
             id: 'ex_19_frag_5',
             label: 'Fragment 5',
             shortLabel: 'Frag 5',
             kind: VariantKind.fragment,
-            bookPage: 86,
+            bookPage: 37,
           ),
           ExerciseVariant(
             id: 'ex_19_frag_6',
             label: 'Fragment 6',
             shortLabel: 'Frag 6',
             kind: VariantKind.fragment,
-            bookPage: 86,
+            bookPage: 37,
           ),
         ],
         tips: [
@@ -1084,7 +1084,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 200,
         subdivision: 4,
         estimatedMinutes: 5,
-        bookPage: 88,
+        bookPage: 39,
         cdTrack: 20,
       ),
       Exercise(
@@ -1104,7 +1104,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 210,
         subdivision: 4,
         estimatedMinutes: 5,
-        bookPage: 90,
+        bookPage: 41,
         cdTrack: 21,
       ),
       Exercise(
@@ -1124,7 +1124,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 180,
         subdivision: 3,
         estimatedMinutes: 5,
-        bookPage: 92,
+        bookPage: 43,
         cdTrack: 22,
       ),
       Exercise(
@@ -1144,7 +1144,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 190,
         subdivision: 3,
         estimatedMinutes: 5,
-        bookPage: 94,
+        bookPage: 44,
         cdTrack: 23,
         variants: [
           ExerciseVariant(
@@ -1152,14 +1152,14 @@ const List<CoursePart> kCourseParts = [
             label: '23A',
             kind: VariantKind.part,
             note: 'Single string.',
-            bookPage: 94,
+            bookPage: 44,
           ),
           ExerciseVariant(
             id: 'ex_23_b',
             label: '23B',
             kind: VariantKind.part,
             note: 'Moving between strings.',
-            bookPage: 95,
+            bookPage: 44,
           ),
         ],
       ),
@@ -1194,7 +1194,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 3,
         keyCenter: 'A minor',
         estimatedMinutes: 6,
-        bookPage: 100,
+        bookPage: 45,
         cdTrack: 24,
         tips: [
           'A sweep that sounds like a chord is a failed sweep. Roll the '
@@ -1219,7 +1219,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 4,
         keyCenter: 'A minor',
         estimatedMinutes: 6,
-        bookPage: 104,
+        bookPage: 47,
         cdTrack: 25,
       ),
       Exercise(
@@ -1240,7 +1240,7 @@ const List<CoursePart> kCourseParts = [
         subdivision: 4,
         keyCenter: 'A minor',
         estimatedMinutes: 6,
-        bookPage: 108,
+        bookPage: 47,
         cdTrack: 26,
       ),
       Exercise(
@@ -1259,7 +1259,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 200,
         subdivision: 4,
         estimatedMinutes: 6,
-        bookPage: 112,
+        bookPage: 48,
         cdTrack: 27,
         variants: [
           ExerciseVariant(
@@ -1267,14 +1267,14 @@ const List<CoursePart> kCourseParts = [
             label: '27A',
             kind: VariantKind.part,
             note: 'Minor shapes.',
-            bookPage: 112,
+            bookPage: 48,
           ),
           ExerciseVariant(
             id: 'ex_27_b',
             label: '27B',
             kind: VariantKind.part,
             note: 'Major shapes.',
-            bookPage: 113,
+            bookPage: 48,
           ),
         ],
       ),
@@ -1308,7 +1308,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 0,
         subdivision: 1,
         estimatedMinutes: 6,
-        bookPage: 120,
+        bookPage: 48,
         cdTrack: 28,
         variants: [
           ExerciseVariant(
@@ -1316,28 +1316,28 @@ const List<CoursePart> kCourseParts = [
             label: '28A',
             kind: VariantKind.part,
             note: 'Root position.',
-            bookPage: 120,
+            bookPage: 48,
           ),
           ExerciseVariant(
             id: 'ex_28_b',
             label: '28B',
             kind: VariantKind.part,
             note: 'First inversion.',
-            bookPage: 121,
+            bookPage: 48,
           ),
           ExerciseVariant(
             id: 'ex_28_c',
             label: '28C',
             kind: VariantKind.part,
             note: 'Second inversion.',
-            bookPage: 121,
+            bookPage: 48,
           ),
           ExerciseVariant(
             id: 'ex_28_d',
             label: '28D',
             kind: VariantKind.part,
             note: 'Spread voicings.',
-            bookPage: 122,
+            bookPage: 48,
           ),
         ],
       ),
@@ -1356,7 +1356,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 0,
         subdivision: 1,
         estimatedMinutes: 5,
-        bookPage: 124,
+        bookPage: 48,
         cdTrack: 29,
       ),
       Exercise(
@@ -1374,7 +1374,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 170,
         subdivision: 3,
         estimatedMinutes: 5,
-        bookPage: 126,
+        bookPage: 49,
         cdTrack: 30,
       ),
       Exercise(
@@ -1394,7 +1394,7 @@ const List<CoursePart> kCourseParts = [
         maxTempo: 0,
         subdivision: 1,
         estimatedMinutes: 5,
-        bookPage: 128,
+        bookPage: 51,
         cdTrack: 31,
       ),
       Exercise(
