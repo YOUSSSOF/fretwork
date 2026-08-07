@@ -64,11 +64,17 @@ class _SplashGateState extends State<SplashGate>
         widget.child,
         if (!_done)
           Positioned.fill(
-            child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _controller,
-                builder: (context, _) =>
-                    _SplashOverlay(progress: _controller.value),
+            // The overlay sits above the Navigator, where there is no Material
+            // ancestor and therefore no default text style — text would render
+            // in the framework's unstyled debug form. This supplies one.
+            child: Material(
+              type: MaterialType.transparency,
+              child: IgnorePointer(
+                child: AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, _) =>
+                      _SplashOverlay(progress: _controller.value),
+                ),
               ),
             ),
           ),

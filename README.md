@@ -7,7 +7,7 @@
 **An offline guitar practice companion that turns a technique curriculum into a
 daily routine, a session timer, and an honest record of what you actually did.**
 
-`Flutter 3.41` · `Dart 3.11` · `Android + iOS` · `358 tests` · `no network`
+`Flutter 3.41` · `Dart 3.11` · `Android + iOS` · `361 tests` · `no network`
 
 </div>
 
@@ -116,7 +116,7 @@ dart run tool/generate_icon.dart && dart run flutter_launcher_icons
 ```
 
 ```bash
-flutter test          # 358 tests
+flutter test          # 361 tests
 dart analyze          # clean
 flutter build apk --release
 ```
