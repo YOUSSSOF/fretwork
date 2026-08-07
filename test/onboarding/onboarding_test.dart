@@ -203,8 +203,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Your first routine'), findsOneWidget);
+      // Milestone 2 is warm-up only: that is the whole point of starting
+      // there rather than dropping the user into a full session.
       expect(find.text('Left-hand warm-up'), findsOneWidget);
-      expect(find.text('Free play'), findsOneWidget);
     });
 
     testWidgets('a rest day today is explained rather than shown as empty', (

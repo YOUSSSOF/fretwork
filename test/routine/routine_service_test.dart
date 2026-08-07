@@ -79,12 +79,12 @@ void main() {
       }
     });
 
-    test('free play never disappears', () {
-      for (var milestone = 1; milestone <= kMaxMilestone; milestone++) {
+    test('every milestone past the preface schedules something', () {
+      for (var milestone = 2; milestone <= kMaxMilestone; milestone++) {
         expect(
-          kCategoryWeights[milestone]![PracticeCategory.freePlay],
-          greaterThan(0),
-          reason: 'milestone $milestone dropped free play',
+          kCategoryWeights[milestone],
+          isNotEmpty,
+          reason: 'milestone $milestone has nothing to practise',
         );
       }
     });
@@ -159,20 +159,20 @@ void main() {
       }
     });
 
-    test('respects the free-play cap', () {
+    test('no single block swallows the session', () {
       for (final minutes in [20, 60, 150]) {
         final split = allocateMinutes(
           milestone: 10,
           sessionMinutes: minutes,
           available: _categoriesFor(10),
         );
-        expect(
-          split[PracticeCategory.freePlay],
-          inInclusiveRange(
-            RoutineCaps.freePlayMin - 1,
-            RoutineCaps.freePlayMax + 1,
-          ),
-        );
+        for (final entry in split.entries) {
+          expect(
+            entry.value,
+            lessThan(minutes),
+            reason: '${entry.key} took the whole $minutes-minute session',
+          );
+        }
       }
     });
 
@@ -212,7 +212,6 @@ void main() {
       );
       final order = split.keys.map((c) => c.index).toList();
       expect(order, orderedEquals([...order]..sort()));
-      expect(split.keys.last, PracticeCategory.freePlay);
     });
 
     test('returns nothing when no category is available', () {
@@ -469,11 +468,10 @@ void main() {
       }
     });
 
-    test('a milestone-1 user gets a free-play-only plan, not an empty one', () {
+    test('a milestone-1 user gets an empty plan, because the preface is '
+        'reading rather than playing', () {
       final result = _generate(milestone: 1, sessionMinutes: 30);
-      expect(result.day.blocks, hasLength(1));
-      expect(result.day.blocks.single.category, PracticeCategory.freePlay);
-      expect(result.day.allItems, isNotEmpty);
+      expect(result.day.blocks, isEmpty);
     });
   });
 

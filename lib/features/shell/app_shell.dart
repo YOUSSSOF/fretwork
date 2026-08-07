@@ -35,6 +35,11 @@ const List<NavDestination> kNavDestinations = [
     label: 'Routine',
   ),
   NavDestination(
+    icon: Icons.av_timer_outlined,
+    activeIcon: Icons.av_timer_rounded,
+    label: 'Click',
+  ),
+  NavDestination(
     icon: Icons.library_music_outlined,
     activeIcon: Icons.library_music_rounded,
     label: 'Library',
@@ -77,27 +82,82 @@ extension ShellInsetsX on BuildContext {
   double get shellBottomInset => ShellInsets.of(this);
 }
 
-class AppShell extends StatelessWidget {
+/// How long the second back press has to land to count as "yes, exit".
+const Duration kExitConfirmWindow = Duration(seconds: 2);
+
+class AppShell extends StatefulWidget {
   const AppShell({required this.shell, super.key});
 
   final StatefulNavigationShell shell;
 
   @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  DateTime? _lastBackPress;
+
+  /// Back walks out the way you came in: out of a detail screen, then back to
+  /// Home, and only then out of the app — and that last step needs saying
+  /// twice, because a stray back press should never end a practice day.
+  void _handleBack() {
+    final router = GoRouter.of(context);
+    if (router.canPop()) {
+      router.pop();
+      return;
+    }
+
+    if (widget.shell.currentIndex != 0) {
+      widget.shell.goBranch(0);
+      return;
+    }
+
+    final now = DateTime.now();
+    final last = _lastBackPress;
+    if (last != null && now.difference(last) < kExitConfirmWindow) {
+      SystemNavigator.pop();
+      return;
+    }
+
+    _lastBackPress = now;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Press back again to exit'),
+          duration: kExitConfirmWindow,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: context.colors.surface2,
+        ),
+      );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.colors.surface0,
-      extendBody: true,
-      body: ShellInsets(
-        bottom: kNavBarHeight + MediaQuery.paddingOf(context).bottom,
-        child: BranchSwitcher(index: shell.currentIndex, child: shell),
-      ),
-      bottomNavigationBar: _NavBar(
-        currentIndex: shell.currentIndex,
-        onSelected: (index) => shell.goBranch(
-          index,
-          // Tapping the current tab again pops that branch back to its root,
-          // which is what every platform's tab bar does.
-          initialLocation: index == shell.currentIndex,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        _handleBack();
+      },
+      child: Scaffold(
+        backgroundColor: context.colors.surface0,
+        extendBody: true,
+        body: ShellInsets(
+          bottom: kNavBarHeight + MediaQuery.paddingOf(context).bottom,
+          child: BranchSwitcher(
+            index: widget.shell.currentIndex,
+            child: widget.shell,
+          ),
+        ),
+        bottomNavigationBar: _NavBar(
+          currentIndex: widget.shell.currentIndex,
+          onSelected: (index) => widget.shell.goBranch(
+            index,
+            // Tapping the current tab again pops that branch back to its root,
+            // which is what every platform's tab bar does.
+            initialLocation: index == widget.shell.currentIndex,
+          ),
         ),
       ),
     );

@@ -6,8 +6,6 @@ void main() {
   group('Preferences', () {
     test('round-trips through JSON', () {
       const original = Preferences(
-        restBetweenBlocksSeconds: 30,
-        restBetweenItemsSeconds: 10,
         timerMode: TimerMode.quick,
         accentPaletteId: 'teal',
         textScale: 1.2,
@@ -45,7 +43,6 @@ void main() {
         ..['restBetweenBlocksSeconds'] = 9999;
       final prefs = Preferences.fromJson(json);
       expect(prefs.textScale, 1.35);
-      expect(prefs.restBetweenBlocksSeconds, 120);
     });
 
     test('resolvedOrder appends cards a stored order has never seen', () {

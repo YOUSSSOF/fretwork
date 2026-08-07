@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fretwork/core/data/course_providers.dart';
 import 'package:fretwork/core/data/document_store.dart';
@@ -60,7 +61,9 @@ final rotationCursorsProvider =
 /// cursors are side effects, and are deferred out of `build` — a provider may
 /// not write to another provider while building.
 class RoutineNotifier extends Notifier<RoutineDay> {
-  int _seedOffset = 0;
+  /// Fixed. The routine is calculated, not rolled — the same day with the
+  /// same rotation always produces the same plan.
+  static const int _seedOffset = 0;
 
   /// Guards the deferred write. A rebuild or a container disposal can happen
   /// between scheduling the microtask and running it, and writing to a
@@ -100,10 +103,13 @@ class RoutineNotifier extends Notifier<RoutineDay> {
           tempos: tempos,
           seed: existing.generationSeed,
         );
-        final merged = mergePreservingCompleted(
-          previous: existing,
-          replacement: regenerated.day,
-          completedKeys: completed,
+        final merged = fitToBudget(
+          mergePreservingCompleted(
+            previous: existing,
+            replacement: regenerated.day,
+            completedKeys: completed,
+          ),
+          profile.sessionMinutes,
         );
         _persist(merged, regenerated.cursors);
         return merged;
@@ -129,6 +135,32 @@ class RoutineNotifier extends Notifier<RoutineDay> {
           ? profile.isRestWeekday(today)
           : !profile.isRestWeekday(today)) &&
       (day.isRestDay || day.plannedMinutes <= profile.sessionMinutes);
+
+  /// Rebuilds today from scratch against the current profile.
+  ///
+  /// Used whenever the budget or the unlocked content changes. Advancing a
+  /// milestone used to merge the new categories on top of the existing plan,
+  /// which pushed a 90-minute session to 120. New material has to be fitted
+  /// *inside* the budget, not added to it.
+  Future<void> regenerate() async {
+    final profile = ref.read(profileProvider);
+    final today = ref.read(clockProvider).now().dayStart;
+    final generated = _generate(
+      date: today,
+      profile: profile,
+      parts: ref.read(unlockedPartsProvider),
+      cursors: ref.read(rotationCursorsProvider),
+      tempos: ref.read(tempoRecordsProvider),
+      seed: today.day + _seedOffset,
+    );
+
+    final next = fitToBudget(generated.day, profile.sessionMinutes);
+    state = next;
+    await ref
+        .read(storeProvider)
+        .write(BoxNames.routines, next.id, next.toJson());
+    await ref.read(rotationCursorsProvider.notifier).replace(generated.cursors);
+  }
 
   RoutineGeneration _generate({
     required DateTime date,
@@ -163,35 +195,80 @@ class RoutineNotifier extends Notifier<RoutineDay> {
     });
   }
 
-  /// Re-rolls today without disturbing the rotation, so a reshuffle cannot
-  /// quietly skip material the user has not seen yet.
-  Future<void> reshuffle() async {
-    _seedOffset++;
-    final profile = ref.read(profileProvider);
-    final today = ref.read(clockProvider).now().dayStart;
-    final generated = _generate(
-      date: today,
-      profile: profile,
-      parts: ref.read(unlockedPartsProvider),
-      cursors: ref.read(rotationCursorsProvider),
-      tempos: ref.read(tempoRecordsProvider),
-      seed: today.day + _seedOffset,
-    );
+  /// Swaps one item for another exercise or variant, keeping its minutes.
+  ///
+  /// The generator picks; the user overrules. Changing what you practise
+  /// should not cost the block its time or reshuffle everything else.
+  Future<void> replaceItem({
+    required String itemKey,
+    required RoutineItem replacement,
+  }) async {
+    final current = state;
+    final blocks = [
+      for (final block in current.blocks)
+        block.copyWith(
+          items: [
+            for (final item in block.items)
+              if (item.key == itemKey)
+                replacement.copyWith(minutes: item.minutes)
+              else
+                item,
+          ],
+        ),
+    ];
 
-    final completed = ref.read(completedTodayProvider);
-    final next = completed.isEmpty
-        ? generated.day
-        : mergePreservingCompleted(
-            previous: state,
-            replacement: generated.day,
-            completedKeys: completed,
-          );
-
+    final next = current.copyWith(blocks: blocks);
     state = next;
     await ref
         .read(storeProvider)
         .write(BoxNames.routines, next.id, next.toJson());
   }
+}
+
+/// Trims a plan back to a minute budget.
+///
+/// Blocks are shortened proportionally and, if that is still not enough,
+/// dropped from the end. The ordering already puts warm-ups first and the
+/// heaviest technical work in the middle, so the tail is the right place to
+/// lose time.
+@visibleForTesting
+RoutineDay fitToBudget(RoutineDay day, int budget) {
+  if (day.isRestDay || day.plannedMinutes <= budget || day.blocks.isEmpty) {
+    return day;
+  }
+
+  final blocks = <RoutineBlock>[];
+  var remaining = budget;
+
+  for (final block in day.blocks) {
+    if (remaining <= 0) break;
+    final share = (block.minutes * budget / day.plannedMinutes).floor();
+    final minutes = share.clamp(1, remaining);
+
+    final items = _fitItems(block.items, minutes);
+    if (items.isEmpty) continue;
+
+    final actual = items.fold<int>(0, (sum, item) => sum + item.minutes);
+    blocks.add(block.copyWith(minutes: actual, items: items));
+    remaining -= actual;
+  }
+
+  return day.copyWith(
+    blocks: blocks,
+    plannedMinutes: blocks.fold<int>(0, (sum, block) => sum + block.minutes),
+  );
+}
+
+List<RoutineItem> _fitItems(List<RoutineItem> items, int budget) {
+  final kept = <RoutineItem>[];
+  var remaining = budget;
+  for (final item in items) {
+    if (remaining <= 0) break;
+    final minutes = item.minutes.clamp(1, remaining);
+    kept.add(item.copyWith(minutes: minutes));
+    remaining -= minutes;
+  }
+  return kept;
 }
 
 final todayRoutineProvider = NotifierProvider<RoutineNotifier, RoutineDay>(

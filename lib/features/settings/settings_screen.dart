@@ -10,15 +10,16 @@ import 'package:fretwork/core/utils/date_x.dart';
 import 'package:fretwork/core/widgets/core_button.dart';
 import 'package:fretwork/core/widgets/core_card.dart';
 import 'package:fretwork/core/widgets/core_chip.dart';
+import 'package:fretwork/core/widgets/core_divider.dart';
 import 'package:fretwork/core/widgets/core_list_tile.dart';
 import 'package:fretwork/core/widgets/core_scaffold.dart';
 import 'package:fretwork/core/widgets/core_section_header.dart';
 import 'package:fretwork/core/widgets/core_segmented_grid.dart';
 import 'package:fretwork/core/widgets/core_sheet.dart';
 import 'package:fretwork/core/widgets/core_slider.dart';
-import 'package:fretwork/core/widgets/core_stepper_field.dart';
 import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/progress/progress_controller.dart';
+import 'package:fretwork/features/routine/routine_controller.dart';
 import 'package:fretwork/features/settings/preferences_controller.dart';
 import 'package:fretwork/features/settings/widgets/home_layout_editor.dart';
 import 'package:fretwork/features/shell/app_shell.dart';
@@ -45,36 +46,6 @@ class SettingsScreen extends ConsumerWidget {
           _SessionLength(profile: profile),
           const SizedBox(height: Sp.lg),
           _RestDays(profile: profile),
-          const SizedBox(height: Sp.lg),
-          CoreCard(
-            child: Column(
-              children: [
-                CoreStepperField(
-                  label: 'Rest between blocks',
-                  value: prefs.restBetweenBlocksSeconds,
-                  min: 0,
-                  max: 120,
-                  step: 5,
-                  suffix: 's',
-                  onChanged: (value) => notifier.update(
-                    (p) => p.copyWith(restBetweenBlocksSeconds: value),
-                  ),
-                ),
-                const SizedBox(height: Sp.lg),
-                CoreStepperField(
-                  label: 'Rest between items',
-                  value: prefs.restBetweenItemsSeconds,
-                  min: 0,
-                  max: 60,
-                  step: 5,
-                  suffix: 's',
-                  onChanged: (value) => notifier.update(
-                    (p) => p.copyWith(restBetweenItemsSeconds: value),
-                  ),
-                ),
-              ],
-            ),
-          ),
           const SizedBox(height: Sp.lg),
           _Choice<TimerMode>(
             label: 'Default timer mode',
@@ -160,15 +131,6 @@ class SettingsScreen extends ConsumerWidget {
                 notifier.update((p) => p.copyWith(metronomeEnabled: value)),
           ),
           const SizedBox(height: Sp.lg),
-          _Choice<MetronomeSound>(
-            label: 'Sound',
-            values: MetronomeSound.values,
-            labelFor: (s) => s.name,
-            selected: prefs.metronomeSound,
-            onChanged: (value) =>
-                notifier.update((p) => p.copyWith(metronomeSound: value)),
-          ),
-          const SizedBox(height: Sp.lg),
           _Toggle(
             label: 'Accent beat one',
             value: prefs.accentBeatOne,
@@ -198,7 +160,21 @@ class SettingsScreen extends ConsumerWidget {
                   'Practising since ${profile.startedAt.shortDayLabel}. '
                   'Milestone ${profile.milestone} of $kMaxMilestone.',
                 ),
-                const SizedBox(height: Sp.sm),
+                const SizedBox(height: Sp.md),
+                const CoreDivider(),
+                const SizedBox(height: Sp.md),
+                const CoreText.caption('BUILT BY'),
+                const SizedBox(height: Sp.xs),
+                const CoreText.body('Yousof Hashemzadeh'),
+                const CoreText.bodySm('youdexsof.ir'),
+                const SizedBox(height: Sp.md),
+                const CoreText.bodySm(
+                  'The practice structure is inspired by the Rock Discipline '
+                  'course. Fretwork schedules and tracks your work — it is not '
+                  'affiliated with the course and contains none of its '
+                  'material.',
+                ),
+                const SizedBox(height: Sp.md),
                 const CoreText.caption(
                   'No account, no network, no analytics. Everything is stored '
                   'on this device.',
@@ -240,9 +216,12 @@ class _SessionLengthState extends ConsumerState<_SessionLength> {
             suggestion: suggested.toDouble(),
             formatValue: (v) => '${v.round()} min',
             onChanged: (value) => setState(() => _value = value),
-            onChangeEnd: (value) => ref
-                .read(profileProvider.notifier)
-                .setSessionMinutes(value.round()),
+            onChangeEnd: (value) async {
+              await ref
+                  .read(profileProvider.notifier)
+                  .setSessionMinutes(value.round());
+              await ref.read(todayRoutineProvider.notifier).regenerate();
+            },
           ),
           const SizedBox(height: Sp.sm),
           CoreText.caption(

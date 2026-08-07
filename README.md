@@ -7,7 +7,7 @@
 **An offline guitar practice companion that turns a technique curriculum into a
 daily routine, a session timer, and an honest record of what you actually did.**
 
-`Flutter 3.41` · `Dart 3.11` · `Android + iOS` · `354 tests` · `no network`
+`Flutter 3.41` · `Dart 3.11` · `Android + iOS` · `358 tests` · `no network`
 
 </div>
 
@@ -66,6 +66,13 @@ to transcribe on a phone — or paste ASCII tab and watch it render live. Bar
 lines are derived from the rhythm rather than counted by hand. Stored per
 exercise or per variant. The app ships no notation of its own — see *Content*.
 
+**A session that behaves like a session.** Nothing starts until you press
+Start. When an item's time runs out the clock stops and shows you what is next,
+rather than yanking you into it. Leaving the app pauses everything; back needs
+pressing twice. The metronome stops whenever the timer does, because a click
+running against a stopped clock is just noise. Any block's exercise can be
+swapped mid-session from a picker, and the clock waits while you choose.
+
 **Empty days are data.** Every day between launches gets a record, so the
 calendar shows the days you missed instead of leaving them blank, and adherence
 divides by the days you were meant to practise rather than the days you happened
@@ -109,7 +116,7 @@ dart run tool/generate_icon.dart && dart run flutter_launcher_icons
 ```
 
 ```bash
-flutter test          # 354 tests
+flutter test          # 358 tests
 dart analyze          # clean
 flutter build apk --release
 ```
@@ -125,6 +132,7 @@ lib/
     models/     immutable, hand-written toJson/fromJson, no codegen
     data/       document store, curriculum seed, providers
   features/
+    metronome/  the click on its own, and where its sound is chosen
     onboarding/ four steps, with a live block-split preview
     home/       reorderable card stack
     routine/    the generator (pure) plus its screens
@@ -133,6 +141,7 @@ lib/
     history/    day rollover, backfill, calendar
     analytics/  metrics (pure), charts, discipline score, PDF export
     settings/   preferences, backup, reset
+    splash/     the opening: six strings drawn on, plucked, then the wordmark
 ```
 
 Rules that held: a feature may import `core/` and another feature's
@@ -169,6 +178,14 @@ in `bootstrap.dart`.
   has been Android.
 - **English only**, though all layout uses directional insets so an RTL locale
   can be added without rework.
+
+## Built by
+
+**Yousof Hashemzadeh** — [youdexsof.ir](https://youdexsof.ir)
+
+The practice structure is inspired by the Rock Discipline course. Fretwork
+schedules and tracks your work; it is not affiliated with the course and
+contains none of its material.
 
 ## Licence
 

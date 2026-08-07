@@ -11,23 +11,17 @@ import 'package:fretwork/core/models/user_profile.dart';
 ///
 /// The design intent, stated so it survives future edits: **warm-up shrinks as
 /// a share of the session as real material unlocks** — it is preparation, not
-/// practice. Free play never disappears, because technique that is never used
-/// musically stays locked in the practice room.
+/// practice.
 const Map<int, Map<PracticeCategory, int>> kCategoryWeights = {
   // Only the preface has been read. There is nothing to drill yet, but there
   // is always something to play.
-  1: {PracticeCategory.freePlay: 100},
-  2: {PracticeCategory.warmupLeft: 70, PracticeCategory.freePlay: 30},
-  3: {
-    PracticeCategory.warmupLeft: 35,
-    PracticeCategory.warmupRight: 35,
-    PracticeCategory.freePlay: 30,
-  },
+  1: <PracticeCategory, int>{},
+  2: {PracticeCategory.warmupLeft: 100},
+  3: {PracticeCategory.warmupLeft: 35, PracticeCategory.warmupRight: 35},
   4: {
     PracticeCategory.warmupLeft: 22,
     PracticeCategory.warmupRight: 22,
     PracticeCategory.warmupSync: 21,
-    PracticeCategory.freePlay: 35,
   },
   5: {
     PracticeCategory.warmupLeft: 10,
@@ -35,7 +29,6 @@ const Map<int, Map<PracticeCategory, int>> kCategoryWeights = {
     PracticeCategory.warmupSync: 10,
     PracticeCategory.timeFeel: 12,
     PracticeCategory.speedAccuracy: 38,
-    PracticeCategory.freePlay: 20,
   },
   6: {
     PracticeCategory.warmupLeft: 6,
@@ -44,7 +37,6 @@ const Map<int, Map<PracticeCategory, int>> kCategoryWeights = {
     PracticeCategory.timeFeel: 8,
     PracticeCategory.speedAccuracy: 26,
     PracticeCategory.scalar: 32,
-    PracticeCategory.freePlay: 16,
   },
   7: {
     PracticeCategory.warmupLeft: 5,
@@ -54,7 +46,6 @@ const Map<int, Map<PracticeCategory, int>> kCategoryWeights = {
     PracticeCategory.speedAccuracy: 18,
     PracticeCategory.scalar: 25,
     PracticeCategory.arpeggio: 20,
-    PracticeCategory.freePlay: 15,
   },
   8: {
     PracticeCategory.warmupLeft: 4,
@@ -65,7 +56,6 @@ const Map<int, Map<PracticeCategory, int>> kCategoryWeights = {
     PracticeCategory.scalar: 19,
     PracticeCategory.arpeggio: 16,
     PracticeCategory.legato: 18,
-    PracticeCategory.freePlay: 14,
   },
   9: {
     PracticeCategory.warmupLeft: 4,
@@ -77,7 +67,6 @@ const Map<int, Map<PracticeCategory, int>> kCategoryWeights = {
     PracticeCategory.arpeggio: 13,
     PracticeCategory.legato: 15,
     PracticeCategory.sweep: 16,
-    PracticeCategory.freePlay: 13,
   },
   10: {
     PracticeCategory.warmupLeft: 3,
@@ -90,7 +79,6 @@ const Map<int, Map<PracticeCategory, int>> kCategoryWeights = {
     PracticeCategory.legato: 13,
     PracticeCategory.sweep: 14,
     PracticeCategory.chordal: 13,
-    PracticeCategory.freePlay: 12,
   },
 };
 
@@ -101,9 +89,6 @@ abstract final class RoutineCaps {
   /// split two ways or three.
   static const int warmupMin = 6;
   static const int warmupMax = 12;
-
-  static const int freePlayMin = 5;
-  static const int freePlayMax = 20;
 
   static const int timeFeelMin = 3;
   static const int timeFeelMax = 8;
@@ -220,13 +205,6 @@ Map<PracticeCategory, int> allocateMinutes({
     }
   }
 
-  if (shares.containsKey(PracticeCategory.freePlay)) {
-    fixed[PracticeCategory.freePlay] = shares[PracticeCategory.freePlay]!.clamp(
-      RoutineCaps.freePlayMin.toDouble(),
-      RoutineCaps.freePlayMax.toDouble(),
-    );
-  }
-
   if (shares.containsKey(PracticeCategory.timeFeel)) {
     fixed[PracticeCategory.timeFeel] = shares[PracticeCategory.timeFeel]!.clamp(
       RoutineCaps.timeFeelMin.toDouble(),
@@ -250,16 +228,10 @@ Map<PracticeCategory, int> allocateMinutes({
       result[entry.key] = entry.value + delta * (entry.value / flexTotal);
     }
   } else if (delta > 0) {
-    // Nothing uncapped to absorb it — push into free play, then warm-up, up to
-    // their ceilings. Any residue is simply not scheduled, and plannedMinutes
-    // reflects that rather than pretending.
+    // Nothing uncapped to absorb it — push into warm-up up to its ceiling.
+    // Any residue is simply not scheduled, and plannedMinutes reflects that
+    // rather than pretending.
     var spare = delta;
-    spare = _topUp(
-      result,
-      PracticeCategory.freePlay,
-      RoutineCaps.freePlayMax.toDouble(),
-      spare,
-    );
     for (final category in warmups) {
       if (spare <= 0) break;
       spare = _topUp(
@@ -274,12 +246,10 @@ Map<PracticeCategory, int> allocateMinutes({
   return _roundToWholeMinutes(result, sessionMinutes);
 }
 
-/// Categories subject to the generic four-minute floor. Warm-up, free play and
-/// time feel have their own explicit caps instead.
+/// Categories subject to the generic four-minute floor. Warm-up and time feel
+/// have their own explicit caps instead.
 bool _hasOwnFloor(PracticeCategory category) =>
-    !category.isWarmup &&
-    category != PracticeCategory.freePlay &&
-    category != PracticeCategory.timeFeel;
+    !category.isWarmup && category != PracticeCategory.timeFeel;
 
 double _topUp(
   Map<PracticeCategory, double> into,
@@ -616,7 +586,6 @@ RoutineItem _buildItem({
 /// The right-hand alternation is mandatory rather than cosmetic: a player who
 /// only ever starts on a down-stroke builds a hand that can only start on a
 /// down-stroke.
-@visibleForTesting
 String focusNoteFor({
   required PracticeCategory category,
   required ProcedureType procedure,

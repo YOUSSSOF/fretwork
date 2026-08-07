@@ -16,6 +16,7 @@ import 'package:fretwork/core/widgets/core_sheet.dart';
 import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/onboarding/onboarding_controller.dart';
 import 'package:fretwork/features/progress/progress_controller.dart';
+import 'package:fretwork/features/routine/routine_controller.dart';
 import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -293,6 +294,9 @@ Future<void> _confirmAdvance(
 
   if (confirmed != true) return;
   await ref.read(profileProvider.notifier).setMilestone(part.milestone);
+  // Rebuild rather than merge: the new categories have to fit inside the
+  // session length, not extend it.
+  await ref.read(todayRoutineProvider.notifier).regenerate();
 }
 
 class _DowngradeRow extends ConsumerWidget {
@@ -330,6 +334,7 @@ class _DowngradeRow extends ConsumerWidget {
           await ref
               .read(profileProvider.notifier)
               .setMilestone(profile.milestone - 1);
+          await ref.read(todayRoutineProvider.notifier).regenerate();
         },
       ),
     );

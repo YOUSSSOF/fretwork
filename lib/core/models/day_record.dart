@@ -192,7 +192,9 @@ class ItemResult {
     category: enumFromName(
       PracticeCategory.values,
       json['category'],
-      PracticeCategory.freePlay,
+      // Free play was removed; anything stored under it decodes as warm-up
+      // rather than throwing.
+      PracticeCategory.warmupLeft,
     ),
     seconds: intFromJson(json['seconds'], 0),
     startTempo: intFromJson(json['startTempo'], 0),

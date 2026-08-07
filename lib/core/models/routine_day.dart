@@ -30,13 +30,20 @@ class RoutineItem {
   /// different variants.
   String get key => variantId == null ? exerciseId : '$exerciseId:$variantId';
 
-  RoutineItem copyWith({int? minutes, int? targetTempo}) => RoutineItem(
-    exerciseId: exerciseId,
-    variantId: variantId,
+  RoutineItem copyWith({
+    int? minutes,
+    int? targetTempo,
+    String? exerciseId,
+    String? variantId,
+    ProcedureType? procedure,
+    String? focusNote,
+  }) => RoutineItem(
+    exerciseId: exerciseId ?? this.exerciseId,
+    variantId: variantId ?? this.variantId,
     minutes: minutes ?? this.minutes,
     targetTempo: targetTempo ?? this.targetTempo,
-    procedure: procedure,
-    focusNote: focusNote,
+    procedure: procedure ?? this.procedure,
+    focusNote: focusNote ?? this.focusNote,
   );
 
   Map<String, Object?> toJson() => {
@@ -116,7 +123,9 @@ class RoutineBlock {
     category: enumFromName(
       PracticeCategory.values,
       json['category'],
-      PracticeCategory.freePlay,
+      // Free play was removed; anything stored under it decodes as warm-up
+      // rather than throwing.
+      PracticeCategory.warmupLeft,
     ),
     label: stringFromJson(json['label'], ''),
     minutes: intFromJson(json['minutes'], 0),

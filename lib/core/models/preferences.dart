@@ -31,8 +31,6 @@ enum HomeCardId {
 @immutable
 class Preferences {
   const Preferences({
-    this.restBetweenBlocksSeconds = 45,
-    this.restBetweenItemsSeconds = 0,
     this.timerMode = TimerMode.detailed,
     this.accentPaletteId = 'crimson',
     this.textScale = 1.0,
@@ -48,8 +46,6 @@ class Preferences {
     this.hapticOnBeat = false,
   });
 
-  final int restBetweenBlocksSeconds;
-  final int restBetweenItemsSeconds;
   final TimerMode timerMode;
   final String accentPaletteId;
   final double textScale;
@@ -77,8 +73,6 @@ class Preferences {
       resolvedOrder.where((c) => !hiddenHomeCards.contains(c)).toList();
 
   Preferences copyWith({
-    int? restBetweenBlocksSeconds,
-    int? restBetweenItemsSeconds,
     TimerMode? timerMode,
     String? accentPaletteId,
     double? textScale,
@@ -93,10 +87,6 @@ class Preferences {
     bool? accentBeatOne,
     bool? hapticOnBeat,
   }) => Preferences(
-    restBetweenBlocksSeconds:
-        restBetweenBlocksSeconds ?? this.restBetweenBlocksSeconds,
-    restBetweenItemsSeconds:
-        restBetweenItemsSeconds ?? this.restBetweenItemsSeconds,
     timerMode: timerMode ?? this.timerMode,
     accentPaletteId: accentPaletteId ?? this.accentPaletteId,
     textScale: textScale ?? this.textScale,
@@ -113,8 +103,6 @@ class Preferences {
   );
 
   Map<String, Object?> toJson() => {
-    'restBetweenBlocksSeconds': restBetweenBlocksSeconds,
-    'restBetweenItemsSeconds': restBetweenItemsSeconds,
     'timerMode': timerMode.name,
     'accentPaletteId': accentPaletteId,
     'textScale': textScale,
@@ -136,14 +124,6 @@ class Preferences {
         ?enumFromNameOrNull(HomeCardId.values, name),
     ];
     return Preferences(
-      restBetweenBlocksSeconds: intFromJson(
-        json['restBetweenBlocksSeconds'],
-        45,
-      ).clamp(0, 120),
-      restBetweenItemsSeconds: intFromJson(
-        json['restBetweenItemsSeconds'],
-        0,
-      ).clamp(0, 60),
       timerMode: enumFromName(
         TimerMode.values,
         json['timerMode'],
@@ -187,8 +167,6 @@ class Preferences {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is Preferences &&
-          other.restBetweenBlocksSeconds == restBetweenBlocksSeconds &&
-          other.restBetweenItemsSeconds == restBetweenItemsSeconds &&
           other.timerMode == timerMode &&
           other.accentPaletteId == accentPaletteId &&
           other.textScale == textScale &&
@@ -205,8 +183,6 @@ class Preferences {
 
   @override
   int get hashCode => Object.hash(
-    restBetweenBlocksSeconds,
-    restBetweenItemsSeconds,
     timerMode,
     accentPaletteId,
     textScale,

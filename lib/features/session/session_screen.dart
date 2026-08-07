@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:fretwork/core/data/course_providers.dart';
+import 'package:fretwork/core/data/providers.dart';
 import 'package:fretwork/core/models/exercise.dart';
 import 'package:fretwork/core/models/preferences.dart';
 import 'package:fretwork/core/models/routine_day.dart';
@@ -14,6 +15,7 @@ import 'package:fretwork/core/theme/app_typography.dart';
 import 'package:fretwork/core/widgets/core_ambient_glow.dart';
 import 'package:fretwork/core/widgets/core_book_reference.dart';
 import 'package:fretwork/core/widgets/core_button.dart';
+import 'package:fretwork/core/widgets/core_card.dart';
 import 'package:fretwork/core/widgets/core_chip.dart';
 import 'package:fretwork/core/widgets/core_empty_state.dart';
 import 'package:fretwork/core/widgets/core_icon_button.dart';
@@ -25,8 +27,12 @@ import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/session/metronome/metronome_controller.dart';
 import 'package:fretwork/features/session/metronome/metronome_engine.dart';
 import 'package:fretwork/features/session/session_controller.dart';
+import 'package:fretwork/features/session/widgets/exercise_picker.dart';
 import 'package:fretwork/features/session/widgets/metronome_dial.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+/// How long a second back press has to arrive within to actually leave.
+const Duration kDoubleBackWindow = Duration(seconds: 2);
 
 class SessionScreen extends ConsumerStatefulWidget {
   const SessionScreen({this.adHocExerciseId, this.adHocVariantId, super.key});
@@ -44,16 +50,17 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final Ticker _ringTicker;
   double _itemProgress = 0;
+  DateTime? _lastBackPress;
+  bool _promptOpen = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     // The ring runs off its own ticker rather than the controller's 1 Hz state
-    // updates, so it stays smooth while the numeric readout ticks once a
-    // second (§5.2).
+    // updates, so it stays smooth while the readout ticks once a second.
     _ringTicker = createTicker(_onFrame)..start();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _startIfNeeded());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadIfNeeded());
   }
 
   @override
@@ -65,22 +72,16 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    final notifier = ref.read(sessionProvider.notifier);
-    if (state == AppLifecycleState.paused) {
-      notifier.onBackgrounded();
-      return;
-    }
-    if (state == AppLifecycleState.resumed && notifier.onResumed()) {
-      _showBackgroundPrompt();
+    // Anything other than "in front of the user" stops the clock and the
+    // click. Time in another app is not practice time.
+    if (state != AppLifecycleState.resumed) {
+      ref.read(sessionProvider.notifier).onBackgrounded();
     }
   }
 
-  void _startIfNeeded() {
-    if (!mounted) return;
-    if (ref.read(sessionProvider) != null) return;
-
-    final adHoc = _adHocRoutine();
-    ref.read(sessionProvider.notifier).start(routine: adHoc);
+  void _loadIfNeeded() {
+    if (!mounted || ref.read(sessionProvider) != null) return;
+    ref.read(sessionProvider.notifier).load(routine: _adHocRoutine());
   }
 
   /// Builds a one-item plan for "practise now" from the library.
@@ -90,7 +91,7 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
     final exercise = ref.read(exerciseByIdProvider(exerciseId));
     if (exercise == null) return null;
 
-    final now = DateTime.now();
+    final now = ref.read(clockProvider).now();
     return RoutineDay(
       date: now,
       milestone: 0,
@@ -131,55 +132,75 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
     setState(() => _itemProgress = next);
   }
 
-  Future<void> _showBackgroundPrompt() async {
+  /// Back leaves the session, but not on the first press.
+  Future<void> _handleBack() async {
+    final session = ref.read(sessionProvider);
+    if (session == null || !session.hasStarted) {
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+
+    final now = DateTime.now();
+    final last = _lastBackPress;
+    if (last != null && now.difference(last) < kDoubleBackWindow) {
+      await ref.read(sessionProvider.notifier).end();
+      if (mounted) Navigator.of(context).pop();
+      return;
+    }
+
+    _lastBackPress = now;
+    ref.read(sessionProvider.notifier).pause();
     if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => CoreDialog(
-        title: 'Paused while you were away',
-        message:
-            'The app was in the background for more than ten minutes, so the '
-            'session was paused rather than counting that time as practice.',
-        actions: [
-          CoreButton.primary(
-            label: 'Got it',
-            onPressed: () => Navigator.of(dialogContext).pop(),
-          ),
-        ],
-      ),
-    );
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Press back again to end the session'),
+          duration: kDoubleBackWindow,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: context.colors.surface2,
+        ),
+      );
   }
 
-  Future<bool> _confirmExit() async {
-    final session = ref.read(sessionProvider);
-    if (session == null) return true;
+  /// Shown when an item's timer runs out, with what is coming next.
+  Future<void> _showItemComplete(SessionState session) async {
+    if (_promptOpen) return;
+    _promptOpen = true;
 
-    final choice = await showCoreSheet<String>(
+    final go = await showCoreSheet<bool>(
       context: context,
-      title: 'End the session?',
-      subtitle: 'What you have done so far is kept either way',
-      builder: (sheetContext) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          CoreButton.secondary(
-            label: 'Keep practising',
-            fullWidth: true,
-            onPressed: () => Navigator.of(sheetContext).pop('stay'),
-          ),
-          const SizedBox(height: Sp.sm),
-          CoreButton.destructive(
-            label: 'End and save',
-            fullWidth: true,
-            onPressed: () => Navigator.of(sheetContext).pop('end'),
-          ),
-          const SizedBox(height: Sp.sm),
-        ],
-      ),
+      title: session.isLastItem ? 'Last item done' : 'Item complete',
+      builder: (sheetContext) => _ItemCompleteSheet(session: session),
     );
 
-    if (choice != 'end') return false;
-    await ref.read(sessionProvider.notifier).end();
-    return true;
+    _promptOpen = false;
+    if (!mounted) return;
+    if (go == true) ref.read(sessionProvider.notifier).advance();
+  }
+
+  Future<void> _openPicker(SessionState session) async {
+    final item = session.item;
+    final block = session.block;
+    if (item == null || block == null) return;
+
+    final wasRunning = session.isRunning;
+    if (wasRunning) ref.read(sessionProvider.notifier).pause();
+
+    final chosen = await showExercisePicker(
+      context: context,
+      category: block.category,
+      current: item,
+      date: session.startedAt,
+    );
+
+    if (!mounted) return;
+    if (chosen != null) {
+      await ref.read(sessionProvider.notifier).chooseItem(chosen);
+    }
+    // Picking should not cost practice time, so the clock picks up where it
+    // left off either way.
+    if (wasRunning && mounted) ref.read(sessionProvider.notifier).resume();
   }
 
   @override
@@ -187,13 +208,19 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
     final colors = context.colors;
     final session = ref.watch(sessionProvider);
 
+    ref.listen<SessionPhase?>(sessionProvider.select((s) => s?.phase), (
+      _,
+      phase,
+    ) {
+      if (phase != SessionPhase.itemComplete) return;
+      final current = ref.read(sessionProvider);
+      if (current != null) unawaited(_showItemComplete(current));
+    });
+
     return PopScope(
-      canPop: session == null,
-      onPopInvokedWithResult: (didPop, _) async {
-        if (didPop) return;
-        final leave = await _confirmExit();
-        if (!leave || !mounted) return;
-        Navigator.of(this.context).pop();
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) unawaited(_handleBack());
       },
       child: Scaffold(
         backgroundColor: colors.surface0,
@@ -201,17 +228,20 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
           children: [
             const Positioned.fill(child: CoreAmbientGlow(intensity: 1.4)),
             SafeArea(
-              child: session == null
-                  ? _EmptySession(onClose: () => Navigator.of(context).pop())
-                  : _RunningSession(
-                      session: session,
-                      itemProgress: _itemProgress,
-                      onExit: () async {
-                        final leave = await _confirmExit();
-                        if (!leave || !mounted) return;
-                        Navigator.of(this.context).pop();
-                      },
-                    ),
+              child: switch (session) {
+                null => _Finished(onClose: () => Navigator.of(context).pop()),
+                final s when !s.hasStarted => _ReadyToStart(
+                  session: s,
+                  onStart: ref.read(sessionProvider.notifier).start,
+                  onClose: () => Navigator.of(context).pop(),
+                ),
+                final s => _RunningSession(
+                  session: s,
+                  itemProgress: _itemProgress,
+                  onBack: _handleBack,
+                  onPickExercise: () => _openPicker(s),
+                ),
+              },
             ),
           ],
         ),
@@ -220,8 +250,97 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
   }
 }
 
-class _EmptySession extends StatelessWidget {
-  const _EmptySession({required this.onClose});
+/// The pre-flight screen. Nothing runs until the user says so.
+class _ReadyToStart extends ConsumerWidget {
+  const _ReadyToStart({
+    required this.session,
+    required this.onStart,
+    required this.onClose,
+  });
+
+  final SessionState session;
+  final VoidCallback onStart;
+  final VoidCallback onClose;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final index = ref.watch(exerciseIndexProvider);
+    final first = session.item;
+    final exercise = first == null ? null : index[first.exerciseId];
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Sp.sm, Sp.sm, Sp.sm, 0),
+          child: Row(
+            children: [
+              CoreIconButton(
+                icon: Icons.close_rounded,
+                semanticLabel: 'Leave',
+                onPressed: onClose,
+              ),
+              const Spacer(),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
+            children: [
+              const SizedBox(height: Sp.lg),
+              CoreText.display('${session.routine.plannedMinutes} min'),
+              const SizedBox(height: Sp.xs),
+              CoreText.body(
+                '${session.totalItems} items across '
+                '${session.routine.blocks.length} blocks.',
+              ),
+              const SizedBox(height: Sp.xl),
+              if (exercise != null) ...[
+                const CoreText.label('STARTS WITH'),
+                const SizedBox(height: Sp.sm),
+                CoreCard(
+                  glass: true,
+                  child: _ItemSummary(
+                    exercise: exercise,
+                    item: first!,
+                    showBook: true,
+                  ),
+                ),
+              ],
+              const SizedBox(height: Sp.lg),
+              const CoreText.label('THE PLAN'),
+              const SizedBox(height: Sp.sm),
+              for (final block in session.routine.blocks)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: Sp.xs),
+                  child: Row(
+                    children: [
+                      Expanded(child: CoreText.bodySm(block.label)),
+                      CoreText.mono('${block.minutes} min'),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: Sp.huge),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(Sp.lg),
+          child: CoreButton.primary(
+            label: 'Start session',
+            size: CoreButtonSize.lg,
+            fullWidth: true,
+            leading: Icons.play_arrow_rounded,
+            onPressed: onStart,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Finished extends StatelessWidget {
+  const _Finished({required this.onClose});
 
   final VoidCallback onClose;
 
@@ -236,16 +355,151 @@ class _EmptySession extends StatelessWidget {
   }
 }
 
+class _ItemCompleteSheet extends ConsumerWidget {
+  const _ItemCompleteSheet({required this.session});
+
+  final SessionState session;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final index = ref.watch(exerciseIndexProvider);
+    final done = session.item;
+    final next = session.nextItem;
+    final doneExercise = done == null ? null : index[done.exerciseId];
+    final nextExercise = next == null ? null : index[next.exerciseId];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (doneExercise != null && done != null)
+          CoreCard(
+            child: Row(
+              children: [
+                Icon(
+                  Icons.check_circle_rounded,
+                  size: 18,
+                  color: context.colors.success,
+                ),
+                const SizedBox(width: Sp.sm),
+                Expanded(
+                  child: CoreText.title(
+                    _labelFor(doneExercise, done.variantId),
+                  ),
+                ),
+                CoreText.mono('${done.minutes} min'),
+              ],
+            ),
+          ),
+        const SizedBox(height: Sp.lg),
+        if (nextExercise != null && next != null) ...[
+          const CoreText.label('UP NEXT'),
+          const SizedBox(height: Sp.sm),
+          CoreCard(
+            glass: true,
+            child: _ItemSummary(
+              exercise: nextExercise,
+              item: next,
+              showBook: true,
+            ),
+          ),
+          const SizedBox(height: Sp.xl),
+          CoreButton.primary(
+            label: 'Go to next',
+            size: CoreButtonSize.lg,
+            fullWidth: true,
+            trailing: Icons.arrow_forward_rounded,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+          const SizedBox(height: Sp.sm),
+          CoreButton.ghost(
+            label: 'Stay on this one',
+            fullWidth: true,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+        ] else ...[
+          const CoreText.body(
+            'That was the last item. Finishing here saves the session.',
+          ),
+          const SizedBox(height: Sp.xl),
+          CoreButton.primary(
+            label: 'Finish session',
+            size: CoreButtonSize.lg,
+            fullWidth: true,
+            onPressed: () => Navigator.of(context).pop(true),
+          ),
+          const SizedBox(height: Sp.sm),
+          CoreButton.ghost(
+            label: 'Stay on this one',
+            fullWidth: true,
+            onPressed: () => Navigator.of(context).pop(false),
+          ),
+        ],
+        const SizedBox(height: Sp.sm),
+      ],
+    );
+  }
+}
+
+String _labelFor(Exercise exercise, String? variantId) {
+  final variant = exercise.variantById(variantId);
+  return variant == null
+      ? exercise.label
+      : '${exercise.label} · ${variant.label}';
+}
+
+class _ItemSummary extends StatelessWidget {
+  const _ItemSummary({
+    required this.exercise,
+    required this.item,
+    this.showBook = false,
+  });
+
+  final Exercise exercise;
+  final RoutineItem item;
+  final bool showBook;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CoreText.title(_labelFor(exercise, item.variantId)),
+        const SizedBox(height: Sp.xs),
+        CoreText.bodySm(exercise.title),
+        const SizedBox(height: Sp.sm),
+        Wrap(
+          spacing: Sp.xs,
+          runSpacing: Sp.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            CoreChip(label: '${item.minutes} min'),
+            if (item.targetTempo > 0)
+              CoreChip(label: '${item.targetTempo} bpm'),
+            CoreChip(label: item.procedure.label),
+            if (showBook && exercise.bookPage > 0)
+              CoreBookReference(
+                page: exercise.bookPage,
+                cdTrack: exercise.cdTrack,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _RunningSession extends ConsumerWidget {
   const _RunningSession({
     required this.session,
     required this.itemProgress,
-    required this.onExit,
+    required this.onBack,
+    required this.onPickExercise,
   });
 
   final SessionState session;
   final double itemProgress;
-  final Future<void> Function() onExit;
+  final Future<void> Function() onBack;
+  final VoidCallback onPickExercise;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -253,13 +507,13 @@ class _RunningSession extends ConsumerWidget {
     final exercise = item == null
         ? null
         : ref.watch(exerciseByIdProvider(item.exerciseId));
-    final variant = exercise?.variantById(item?.variantId);
     final detailed = session.mode == TimerMode.detailed;
+    final waiting = session.phase == SessionPhase.itemComplete;
 
     return Column(
       children: [
         _ProgressRail(session: session),
-        _Header(session: session, onExit: onExit),
+        _Header(session: session, onBack: onBack),
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: Sp.lg),
@@ -268,29 +522,31 @@ class _RunningSession extends ConsumerWidget {
                 const SizedBox(height: Sp.lg),
                 _TimerRing(session: session, progress: itemProgress),
                 const SizedBox(height: Sp.xl),
-                if (exercise != null)
+                if (exercise != null && item != null)
                   _ExerciseHeadline(
                     exercise: exercise,
-                    variant: variant,
-                    focusNote: item?.focusNote ?? '',
+                    item: item,
                     detailed: detailed,
+                    onPickExercise: onPickExercise,
                   ),
-                if (detailed && item != null && item.procedure.usesMetronome)
+                if (detailed &&
+                    item != null &&
+                    item.procedure.usesMetronome &&
+                    !waiting)
                   const _MetronomePanel(),
                 const SizedBox(height: Sp.huge),
               ],
             ),
           ),
         ),
-        _ControlBar(session: session, onExit: onExit),
+        _ControlBar(session: session),
       ],
     );
   }
 }
 
 /// A segmented rail across the very top: one segment per item, filling as the
-/// session advances, so the user always knows how much is left without doing
-/// arithmetic.
+/// session advances, so the user always knows how much is left.
 class _ProgressRail extends StatelessWidget {
   const _ProgressRail({required this.session});
 
@@ -325,10 +581,10 @@ class _ProgressRail extends StatelessWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.session, required this.onExit});
+  const _Header({required this.session, required this.onBack});
 
   final SessionState session;
-  final Future<void> Function() onExit;
+  final Future<void> Function() onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -339,7 +595,7 @@ class _Header extends StatelessWidget {
           CoreIconButton(
             icon: Icons.close_rounded,
             semanticLabel: 'End session',
-            onPressed: onExit,
+            onPressed: onBack,
           ),
           Expanded(
             child: Column(
@@ -358,7 +614,7 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _TimerRing extends ConsumerWidget {
+class _TimerRing extends StatelessWidget {
   const _TimerRing({required this.session, required this.progress});
 
   final SessionState session;
@@ -371,8 +627,16 @@ class _TimerRing extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final paused = session.phase == SessionPhase.paused;
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final label = switch (session.phase) {
+      SessionPhase.paused => 'PAUSED',
+      SessionPhase.itemComplete => 'DONE',
+      _ => 'REMAINING',
+    };
+    final dimmed =
+        session.isPaused || session.phase == SessionPhase.itemComplete;
+
     return CoreProgressRing(
       size: 240,
       progress: progress,
@@ -384,9 +648,9 @@ class _TimerRing extends ConsumerWidget {
             _format(session.itemRemaining),
             style: CoreTextStyle.display,
             tabular: true,
-            color: paused ? context.colors.textTertiary : null,
+            color: dimmed ? colors.textTertiary : null,
           ),
-          CoreText.caption(paused ? 'PAUSED' : 'REMAINING'),
+          CoreText.caption(label),
         ],
       ),
     );
@@ -396,32 +660,57 @@ class _TimerRing extends ConsumerWidget {
 class _ExerciseHeadline extends StatelessWidget {
   const _ExerciseHeadline({
     required this.exercise,
-    required this.variant,
-    required this.focusNote,
+    required this.item,
     required this.detailed,
+    required this.onPickExercise,
   });
 
   final Exercise exercise;
-  final ExerciseVariant? variant;
-  final String focusNote;
+  final RoutineItem item;
   final bool detailed;
+  final VoidCallback onPickExercise;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Column(
       children: [
-        CoreText.h2(
-          variant == null
-              ? exercise.label
-              : '${exercise.label} · ${variant!.label}',
-          align: TextAlign.center,
+        // The whole title is the control: the generator's pick is a
+        // suggestion, and swapping it should not be hidden behind a menu.
+        CorePressable(
+          onPressed: onPickExercise,
+          pressedScale: 0.98,
+          semanticLabel: 'Change exercise',
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Sp.md,
+              vertical: Sp.sm,
+            ),
+            decoration: BoxDecoration(border: Border.all(color: colors.border)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: CoreText.h3(
+                    _labelFor(exercise, item.variantId),
+                    align: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(width: Sp.sm),
+                Icon(
+                  Icons.unfold_more_rounded,
+                  size: 18,
+                  color: colors.textSecondary,
+                ),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(height: Sp.xs),
+        const SizedBox(height: Sp.sm),
         CoreText.body(exercise.title, align: TextAlign.center),
-        if (focusNote.isNotEmpty) ...[
+        if (item.focusNote.isNotEmpty) ...[
           const SizedBox(height: Sp.md),
-          CoreText.label(focusNote, color: colors.accentStrong),
+          CoreText.label(item.focusNote, color: colors.accentStrong),
         ],
         if (detailed) ...[
           const SizedBox(height: Sp.md),
@@ -451,8 +740,8 @@ class _ExerciseHeadline extends StatelessWidget {
   }
 }
 
-/// Tips are behind a button, never pinned to the screen (§18.5): a wall of
-/// instruction during a timed item is something to read instead of playing.
+/// Tips are behind a button, never pinned to the screen: a wall of instruction
+/// during a timed item is something to read instead of playing.
 Future<void> _showTips(BuildContext context, Exercise exercise) =>
     showCoreSheet<void>(
       context: context,
@@ -500,48 +789,7 @@ class _MetronomePanel extends ConsumerWidget {
       children: [
         MetronomeDial(state: metronome, onTempoChanged: notifier.setTempo),
         const SizedBox(height: Sp.lg),
-        // Explicit steps in both directions. The dial is faster for a big
-        // move, but it is a poor way to take exactly one bpm off, and there
-        // was no way at all to go down without it.
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _TempoStep(
-              label: '-5',
-              enabled: metronome.canGoSlower,
-              onPressed: () => notifier.nudge(-5),
-            ),
-            const SizedBox(width: Sp.sm),
-            _TempoStep(
-              label: '-1',
-              enabled: metronome.canGoSlower,
-              onPressed: () => notifier.nudge(-1),
-            ),
-            const SizedBox(width: Sp.md),
-            CoreIconButton(
-              icon: metronome.running
-                  ? Icons.pause_rounded
-                  : Icons.play_arrow_rounded,
-              semanticLabel: metronome.running
-                  ? 'Stop the click'
-                  : 'Start the click',
-              bordered: true,
-              onPressed: notifier.toggle,
-            ),
-            const SizedBox(width: Sp.md),
-            _TempoStep(
-              label: '+1',
-              enabled: metronome.canGoFaster,
-              onPressed: () => notifier.nudge(1),
-            ),
-            const SizedBox(width: Sp.sm),
-            _TempoStep(
-              label: '+5',
-              enabled: metronome.canGoFaster,
-              onPressed: () => notifier.nudge(5),
-            ),
-          ],
-        ),
+        TempoStepRow(state: metronome, notifier: notifier),
         const SizedBox(height: Sp.md),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -567,14 +815,7 @@ class _MetronomePanel extends ConsumerWidget {
             for (final subdivision in kSubdivisions)
               CoreSegmentedItem(
                 value: subdivision,
-                label: switch (subdivision) {
-                  1 => '1/4',
-                  2 => '1/8',
-                  3 => 'trip',
-                  4 => '1/16',
-                  6 => 'sext',
-                  _ => '1/32',
-                },
+                label: subdivisionLabel(subdivision),
               ),
           ],
           selected: {metronome.subdivision},
@@ -592,17 +833,56 @@ class _MetronomePanel extends ConsumerWidget {
   }
 }
 
+String subdivisionLabel(int subdivision) => switch (subdivision) {
+  1 => '1/4',
+  2 => '1/8',
+  3 => 'trip',
+  4 => '1/16',
+  6 => 'sext',
+  _ => '1/32',
+};
+
 class _ControlBar extends ConsumerWidget {
-  const _ControlBar({required this.session, required this.onExit});
+  const _ControlBar({required this.session});
 
   final SessionState session;
-  final Future<void> Function() onExit;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(sessionProvider.notifier);
-    final paused = session.phase == SessionPhase.paused;
 
+    // Once an item is done the transport is meaningless — the only thing left
+    // to do is move on.
+    if (session.phase == SessionPhase.itemComplete) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(Sp.lg, 0, Sp.lg, Sp.lg),
+        child: Row(
+          children: [
+            Expanded(
+              child: CoreButton.secondary(
+                label: '+30s more',
+                size: CoreButtonSize.lg,
+                fullWidth: true,
+                onPressed: () => notifier.extend(const Duration(seconds: 30)),
+              ),
+            ),
+            const SizedBox(width: Sp.sm),
+            Expanded(
+              flex: 2,
+              child: CoreButton.primary(
+                label: session.isLastItem ? 'Finish' : 'Next exercise',
+                size: CoreButtonSize.lg,
+                fullWidth: true,
+                trailing: Icons.arrow_forward_rounded,
+                onPressed: notifier.advance,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final paused = session.isPaused;
     return Padding(
       padding: const EdgeInsets.fromLTRB(Sp.lg, 0, Sp.lg, Sp.lg),
       child: Row(
@@ -628,7 +908,7 @@ class _ControlBar extends ConsumerWidget {
             icon: Icons.check_rounded,
             semanticLabel: 'Finish this item',
             bordered: true,
-            onPressed: notifier.next,
+            onPressed: notifier.completeItem,
           ),
         ],
       ),
@@ -636,8 +916,54 @@ class _ControlBar extends ConsumerWidget {
   }
 }
 
-/// A single-tap tempo step. Long-press repeats, so holding -1 walks the tempo
-/// down rather than needing thirty taps.
+/// Explicit tempo steps in both directions. The dial is faster for a big move,
+/// but a poor way to take exactly one bpm off.
+class TempoStepRow extends StatelessWidget {
+  const TempoStepRow({required this.state, required this.notifier, super.key});
+
+  final MetronomeState state;
+  final MetronomeNotifier notifier;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _TempoStep(
+          label: '-5',
+          enabled: state.canGoSlower,
+          onPressed: () => notifier.nudge(-5),
+        ),
+        const SizedBox(width: Sp.sm),
+        _TempoStep(
+          label: '-1',
+          enabled: state.canGoSlower,
+          onPressed: () => notifier.nudge(-1),
+        ),
+        const SizedBox(width: Sp.md),
+        CoreIconButton(
+          icon: state.running ? Icons.pause_rounded : Icons.play_arrow_rounded,
+          semanticLabel: state.running ? 'Stop the click' : 'Start the click',
+          bordered: true,
+          onPressed: notifier.toggle,
+        ),
+        const SizedBox(width: Sp.md),
+        _TempoStep(
+          label: '+1',
+          enabled: state.canGoFaster,
+          onPressed: () => notifier.nudge(1),
+        ),
+        const SizedBox(width: Sp.sm),
+        _TempoStep(
+          label: '+5',
+          enabled: state.canGoFaster,
+          onPressed: () => notifier.nudge(5),
+        ),
+      ],
+    );
+  }
+}
+
 class _TempoStep extends StatefulWidget {
   const _TempoStep({
     required this.label,

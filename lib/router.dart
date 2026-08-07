@@ -7,6 +7,7 @@ import 'package:fretwork/features/history/history_screen.dart';
 import 'package:fretwork/features/home/home_screen.dart';
 import 'package:fretwork/features/library/exercise_detail_screen.dart';
 import 'package:fretwork/features/library/library_screen.dart';
+import 'package:fretwork/features/metronome/metronome_screen.dart';
 import 'package:fretwork/features/onboarding/onboarding_screen.dart';
 import 'package:fretwork/features/progress/milestone_screen.dart';
 import 'package:fretwork/features/progress/progress_controller.dart';
@@ -22,6 +23,7 @@ abstract final class Routes {
   static const String progress = '/home/progress';
   static const String routine = '/routine';
   static const String session = '/routine/session';
+  static const String metronome = '/metronome';
   static const String library = '/library';
   static const String analytics = '/analytics';
   static const String history = '/analytics/history';
@@ -120,6 +122,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                         ),
                   ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.metronome,
+                pageBuilder: (context, state) => PageTransitions.none(
+                  state: state,
+                  child: const MetronomeScreen(),
+                ),
               ),
             ],
           ),

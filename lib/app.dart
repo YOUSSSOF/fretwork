@@ -8,6 +8,7 @@ import 'package:fretwork/core/motion/motion_scope.dart';
 import 'package:fretwork/core/theme/app_theme.dart';
 import 'package:fretwork/features/history/history_controller.dart';
 import 'package:fretwork/features/settings/preferences_controller.dart';
+import 'package:fretwork/features/splash/splash_screen.dart';
 import 'package:fretwork/router.dart';
 
 class FretworkApp extends ConsumerStatefulWidget {
@@ -55,8 +56,12 @@ class _FretworkAppState extends ConsumerState<FretworkApp>
       theme: AppTheme.build(prefs),
       themeMode: ThemeMode.dark,
       routerConfig: ref.watch(routerProvider),
-      builder: (context, child) =>
-          _MotionRoot(prefs: prefs, child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => _MotionRoot(
+        prefs: prefs,
+        // Inside MotionRoot so the opening honours reduce-motion, and above
+        // the router so it covers whatever the first route turns out to be.
+        child: SplashGate(child: child ?? const SizedBox.shrink()),
+      ),
     );
   }
 }

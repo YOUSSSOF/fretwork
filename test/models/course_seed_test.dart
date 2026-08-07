@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:fretwork/core/data/course_seed.dart';
 import 'package:fretwork/core/models/exercise.dart';
 import 'package:fretwork/core/models/practice_category.dart';
+import 'package:fretwork/features/routine/routine_service.dart';
 
 void main() {
   final allExercises = [for (final part in kCourseSeed) ...part.exercises];
@@ -113,9 +114,17 @@ void main() {
       expect(covered, containsAll(PracticeCategory.values));
     });
 
-    test('free play is available from the very first milestone', () {
-      expect(kFreePlayPart.milestone, 1);
-      expect(kFreePlayPart.exercises, isNotEmpty);
+    test('no part schedules a category the weight table cannot select', () {
+      final weighted = <PracticeCategory>{
+        for (final weights in kCategoryWeights.values) ...weights.keys,
+      };
+      for (final exercise in allExercises) {
+        expect(
+          weighted,
+          contains(exercise.category),
+          reason: '${exercise.id} is in a category nothing can schedule',
+        );
+      }
     });
 
     test('the preface unlocks first and schedules nothing', () {

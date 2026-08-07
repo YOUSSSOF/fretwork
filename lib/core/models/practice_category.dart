@@ -2,7 +2,7 @@
 ///
 /// The order of this enum is the order blocks appear in a generated routine:
 /// warm-ups, then time feel, then the technical material in the order the
-/// course unlocks it, and free play last.
+/// course unlocks it.
 enum PracticeCategory {
   warmupLeft,
   warmupRight,
@@ -13,8 +13,7 @@ enum PracticeCategory {
   arpeggio,
   legato,
   sweep,
-  chordal,
-  freePlay;
+  chordal;
 
   String get label => switch (this) {
     PracticeCategory.warmupLeft => 'Left-hand warm-up',
@@ -27,7 +26,6 @@ enum PracticeCategory {
     PracticeCategory.legato => 'Legato',
     PracticeCategory.sweep => 'Sweep picking',
     PracticeCategory.chordal => 'Chordal',
-    PracticeCategory.freePlay => 'Free play',
   };
 
   String get shortLabel => switch (this) {
@@ -41,7 +39,6 @@ enum PracticeCategory {
     PracticeCategory.legato => 'Legato',
     PracticeCategory.sweep => 'Sweep',
     PracticeCategory.chordal => 'Chords',
-    PracticeCategory.freePlay => 'Free',
   };
 
   bool get isWarmup =>
@@ -138,6 +135,14 @@ enum ProcedureType {
   };
 
   bool get usesMetronome => this != ProcedureType.freeTime;
+
+  /// Where to file time for an exercise that has vanished from the seed
+  /// between a plan being generated and run.
+  PracticeCategory get fallbackCategory => switch (this) {
+    ProcedureType.freeTime => PracticeCategory.chordal,
+    ProcedureType.hold => PracticeCategory.scalar,
+    _ => PracticeCategory.speedAccuracy,
+  };
 }
 
 /// What kind of subdivision of a parent exercise a variant is.

@@ -18,77 +18,6 @@ library;
 import 'package:fretwork/core/models/exercise.dart';
 import 'package:fretwork/core/models/practice_category.dart';
 
-/// Free play is the app author's own addition, not part of the course. It
-/// unlocks at the very first milestone — someone who has only read the preface
-/// still owns a guitar — and it never disappears from the weights, because
-/// technique that is never used musically stays locked in the practice room.
-const CoursePart kFreePlayPart = CoursePart(
-  id: 'part_free',
-  order: 99,
-  label: 'Free play',
-  milestone: 1,
-  blurb: 'Unstructured playing time. Always in the routine, never assessed.',
-  exercises: [
-    Exercise(
-      id: 'fp_improvise',
-      partId: 'part_free',
-      label: 'Free play',
-      title: 'Improvise over a groove',
-      summary:
-          'Play freely with no click and no target. The only rule is to use '
-          'something from today\'s session in a musical context.',
-      category: PracticeCategory.freePlay,
-      tags: [TechniqueTag.improvisation],
-      procedure: ProcedureType.freeTime,
-      difficulty: 1,
-      defaultTempo: 0,
-      minTempo: 0,
-      maxTempo: 0,
-      subdivision: 1,
-      estimatedMinutes: 8,
-      bookPage: 0,
-    ),
-    Exercise(
-      id: 'fp_apply',
-      partId: 'part_free',
-      label: 'Free play',
-      title: "Apply today's technique",
-      summary:
-          'Take one shape or sequence from this session and force it into a '
-          'riff or a solo line. If it does not fit, that is the useful part.',
-      category: PracticeCategory.freePlay,
-      tags: [TechniqueTag.improvisation],
-      procedure: ProcedureType.freeTime,
-      difficulty: 2,
-      defaultTempo: 0,
-      minTempo: 0,
-      maxTempo: 0,
-      subdivision: 1,
-      estimatedMinutes: 8,
-      bookPage: 0,
-    ),
-    Exercise(
-      id: 'fp_repertoire',
-      partId: 'part_free',
-      label: 'Free play',
-      title: 'Work on a song',
-      summary:
-          'Learn or refine a section of real repertoire. Counts as practice '
-          'because it is the reason the rest of the session exists.',
-      category: PracticeCategory.freePlay,
-      tags: [TechniqueTag.improvisation],
-      procedure: ProcedureType.freeTime,
-      difficulty: 1,
-      defaultTempo: 0,
-      minTempo: 0,
-      maxTempo: 0,
-      subdivision: 1,
-      estimatedMinutes: 10,
-      bookPage: 0,
-    ),
-  ],
-);
-
 /// The nine course parts plus the preface. Milestones are unique and
 /// contiguous, 1 through 10 — the seed integrity test enforces both.
 const List<CoursePart> kCourseParts = [
@@ -1515,8 +1444,8 @@ const List<CoursePart> kCourseParts = [
   ),
 ];
 
-/// Everything the app knows about: the course, plus free play.
-const List<CoursePart> kCourseSeed = [...kCourseParts, kFreePlayPart];
+/// Everything the app knows about.
+const List<CoursePart> kCourseSeed = kCourseParts;
 
 /// Every exercise across every part, keyed by id.
 Map<String, Exercise> buildExerciseIndex([

@@ -43,3 +43,8 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Source material and working docs — not mine to publish, and not needed to build.
+*.pdf
+DESIGN_SYSTEM.md
+PRACTICE_APP_PLAN.md

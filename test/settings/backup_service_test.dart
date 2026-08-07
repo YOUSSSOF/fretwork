@@ -22,6 +22,19 @@ Future<DocumentStore> _populated() async {
     'exerciseId': 'ex_11',
     'points': [],
   });
+  // Transcribed tablature is the one thing in here the user cannot get back
+  // from the seed, so a backup that quietly dropped it would be worthless.
+  await store.write(BoxNames.tabs, 'ex_11', {
+    'exerciseId': 'ex_11',
+    'title': 'My transcription',
+    'measures': [
+      {
+        'notes': [
+          {'string': 5, 'fret': 7, 'duration': 'eighth'},
+        ],
+      },
+    ],
+  });
   await store.putMeta(MetaKeys.schemaVersion, 1);
   return store;
 }
@@ -38,6 +51,21 @@ void main() {
       final boxes = decoded['boxes']! as Map<String, Object?>;
       expect(boxes.keys, containsAll(BoxNames.all));
       expect((boxes[BoxNames.days]! as Map).keys, hasLength(2));
+      expect((boxes[BoxNames.tabs]! as Map).keys, contains('ex_11'));
+    });
+
+    test('a round trip brings transcribed tabs back intact', () async {
+      final json = exportBackup(await _populated());
+      final restored = MemoryDocumentStore();
+
+      final result = await importBackup(restored, json);
+
+      expect(result.isSuccess, isTrue);
+      expect(result.counts[BoxNames.tabs], 1);
+      expect(
+        restored.readAll(BoxNames.tabs)['ex_11'],
+        (await _populated()).readAll(BoxNames.tabs)['ex_11'],
+      );
     });
 
     test('an empty store still produces a well-formed backup', () {

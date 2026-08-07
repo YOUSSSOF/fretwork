@@ -17,6 +17,10 @@ const Duration kTempoPersistDebounce = Duration(milliseconds: 800);
 /// The +8 bpm ladder step (§12).
 const int kLadderStep = 8;
 
+/// Stands in for an exercise id when the metronome is used on its own, so
+/// tempo memory does not leak into a real exercise's record.
+const String kStandaloneMetronomeId = '__standalone__';
+
 @immutable
 class MetronomeState {
   const MetronomeState({
@@ -196,7 +200,7 @@ class MetronomeNotifier extends Notifier<MetronomeState> {
   /// immediately rather than debounced.
   Future<void> markClean() async {
     final exerciseId = state.exerciseId;
-    if (exerciseId == null) return;
+    if (exerciseId == null || exerciseId == kStandaloneMetronomeId) return;
     unawaited(HapticFeedback.mediumImpact());
     await ref
         .read(tempoRecordsProvider.notifier)
@@ -208,6 +212,13 @@ class MetronomeNotifier extends Notifier<MetronomeState> {
             clean: true,
           ),
         );
+  }
+
+  /// Re-reads the chosen sound. Called when the preference changes so the new
+  /// samples are in the pool before the next beat rather than after it.
+  Future<void> reloadSound() async {
+    final engine = ref.read(metronomeEngineProvider);
+    await engine.load(ref.read(preferencesProvider).metronomeSound);
   }
 
   void _applyConfiguration() {
@@ -224,7 +235,7 @@ class MetronomeNotifier extends Notifier<MetronomeState> {
   void _schedulePersist() {
     _persistDebounce?.cancel();
     final exerciseId = state.exerciseId;
-    if (exerciseId == null) return;
+    if (exerciseId == null || exerciseId == kStandaloneMetronomeId) return;
     final bpm = state.bpm;
     _persistDebounce = Timer(kTempoPersistDebounce, () {
       unawaited(

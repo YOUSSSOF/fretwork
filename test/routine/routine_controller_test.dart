@@ -148,18 +148,114 @@ void main() {
       expect(second, isNot(first));
     });
 
-    test('reshuffle re-rolls the day and keeps the same date', () async {
+    test('regenerate rebuilds the same day rather than a new one', () async {
       final container = await _ready();
       addTearDown(container.dispose);
 
       final before = container.read(todayRoutineProvider);
       await _settle();
 
-      await container.read(todayRoutineProvider.notifier).reshuffle();
+      await container.read(todayRoutineProvider.notifier).regenerate();
       final after = container.read(todayRoutineProvider);
 
       expect(after.id, before.id);
-      expect(after.blocks, isNot(equals(before.blocks)));
+      expect(after.date, before.date);
+    });
+
+    test('regenerate fits the plan back inside the session budget', () async {
+      final container = await _ready();
+      addTearDown(container.dispose);
+      await _settle();
+
+      await container.read(profileProvider.notifier).setSessionMinutes(30);
+      await container.read(todayRoutineProvider.notifier).regenerate();
+
+      final after = container.read(todayRoutineProvider);
+      final minutes = after.allItems.fold<int>(0, (sum, i) => sum + i.minutes);
+      expect(minutes, lessThanOrEqualTo(30));
+    });
+  });
+
+  group('fitToBudget', () {
+    RoutineDay dayWith(List<RoutineBlock> blocks) => RoutineDay(
+      date: DateTime(2026, 3, 14),
+      milestone: 6,
+      plannedMinutes: blocks.fold(0, (a, b) => a + b.minutes),
+      blocks: blocks,
+      generationSeed: 1,
+      generatedAt: DateTime(2026, 3, 14),
+    );
+
+    RoutineItem item(String id, {int minutes = 5}) => RoutineItem(
+      exerciseId: id,
+      minutes: minutes,
+      targetTempo: 80,
+      procedure: ProcedureType.ladder,
+      focusNote: '',
+    );
+
+    RoutineBlock block(PracticeCategory category, List<RoutineItem> items) =>
+        RoutineBlock(
+          category: category,
+          label: category.label,
+          minutes: items.fold(0, (a, b) => a + b.minutes),
+          items: items,
+        );
+
+    test('leaves a plan that already fits alone', () {
+      final day = dayWith([
+        block(PracticeCategory.warmupLeft, [item('ex_1')]),
+      ]);
+      expect(fitToBudget(day, 60), day);
+    });
+
+    test('trims an over-long plan down to the budget', () {
+      final day = dayWith([
+        block(PracticeCategory.warmupLeft, [item('ex_1'), item('ex_2')]),
+        block(PracticeCategory.scalar, [item('ex_12'), item('ex_13')]),
+        block(PracticeCategory.chordal, [item('ex_25'), item('ex_26')]),
+      ]);
+      expect(day.plannedMinutes, 30);
+
+      final fitted = fitToBudget(day, 15);
+
+      expect(fitted.plannedMinutes, lessThanOrEqualTo(15));
+      expect(
+        fitted.blocks.first.category,
+        PracticeCategory.warmupLeft,
+        reason: 'the warm-up survives; time comes off the tail',
+      );
+      expect(fitted.allItems, isNotEmpty);
+    });
+
+    test('the stated minutes match what the items actually add up to', () {
+      final day = dayWith([
+        block(PracticeCategory.scalar, [item('ex_12'), item('ex_13')]),
+        block(PracticeCategory.chordal, [item('ex_25')]),
+      ]);
+
+      final fitted = fitToBudget(day, 9);
+
+      for (final b in fitted.blocks) {
+        expect(b.minutes, b.items.fold<int>(0, (sum, i) => sum + i.minutes));
+      }
+      expect(
+        fitted.plannedMinutes,
+        fitted.allItems.fold<int>(0, (sum, i) => sum + i.minutes),
+      );
+    });
+
+    test('a rest day is never trimmed, because there is nothing to trim', () {
+      final rest = RoutineDay(
+        date: DateTime(2026, 3, 15),
+        milestone: 6,
+        plannedMinutes: 0,
+        blocks: const [],
+        generationSeed: 1,
+        generatedAt: DateTime(2026, 3, 15),
+        isRestDay: true,
+      );
+      expect(fitToBudget(rest, 5), rest);
     });
   });
 

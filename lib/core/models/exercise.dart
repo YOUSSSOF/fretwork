@@ -174,7 +174,9 @@ class Exercise {
     category: enumFromName(
       PracticeCategory.values,
       json['category'],
-      PracticeCategory.freePlay,
+      // Free play was removed; anything stored under it decodes as warm-up
+      // rather than throwing.
+      PracticeCategory.warmupLeft,
     ),
     tags: [
       for (final name in stringListFromJson(json['tags']))

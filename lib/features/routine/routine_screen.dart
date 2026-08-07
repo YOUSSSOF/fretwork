@@ -11,7 +11,6 @@ import 'package:fretwork/core/utils/date_x.dart';
 import 'package:fretwork/core/widgets/core_button.dart';
 import 'package:fretwork/core/widgets/core_card.dart';
 import 'package:fretwork/core/widgets/core_empty_state.dart';
-import 'package:fretwork/core/widgets/core_icon_button.dart';
 import 'package:fretwork/core/widgets/core_pressable.dart';
 import 'package:fretwork/core/widgets/core_scaffold.dart';
 import 'package:fretwork/core/widgets/core_sheet.dart';
@@ -54,15 +53,6 @@ class _RoutineScreenState extends ConsumerState<RoutineScreen> {
       title: 'Routine',
       subtitle: selected.shortDayLabel,
       glow: true,
-      actions: [
-        if (isToday)
-          CoreIconButton(
-            icon: Icons.shuffle_rounded,
-            semanticLabel: 'Reshuffle today',
-            onPressed: () =>
-                ref.read(todayRoutineProvider.notifier).reshuffle(),
-          ),
-      ],
       body: Column(
         children: [
           const SizedBox(height: Sp.lg),
@@ -361,13 +351,16 @@ Future<void> _adjustLength(BuildContext context, WidgetRef ref) async {
             BlockSplitPreview(split: split, showLabels: false),
             const SizedBox(height: Sp.xl),
             CoreButton.primary(
-              label: 'Apply',
+              label: 'Apply and rebuild',
               fullWidth: true,
               onPressed: () async {
                 Navigator.of(sheetContext).pop();
                 await ref
                     .read(profileProvider.notifier)
                     .setSessionMinutes(minutes);
+                // Always rebuild, even if the number did not move: the plan
+                // can be over budget for reasons other than the slider.
+                await ref.read(todayRoutineProvider.notifier).regenerate();
               },
             ),
             const SizedBox(height: Sp.sm),

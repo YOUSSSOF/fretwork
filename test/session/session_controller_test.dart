@@ -140,7 +140,8 @@ void main() {
       final container = await _ready(clock);
       addTearDown(container.dispose);
 
-      container.read(sessionProvider.notifier).start(routine: _plan());
+      container.read(sessionProvider.notifier).load(routine: _plan());
+      container.read(sessionProvider.notifier).start();
       final state = container.read(sessionProvider);
 
       expect(state, isNotNull);
@@ -156,7 +157,7 @@ void main() {
 
       container
           .read(sessionProvider.notifier)
-          .start(
+          .load(
             routine: RoutineDay(
               date: DateTime(2026, 3, 14),
               milestone: 6,
@@ -175,15 +176,19 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(sessionProvider.notifier);
 
-      notifier.start(routine: _plan());
-      notifier.next();
+      notifier.load(routine: _plan());
+      container.read(sessionProvider.notifier).start();
+      notifier.completeItem();
+      notifier.advance();
       expect(container.read(sessionProvider)!.item?.exerciseId, 'ex_3');
 
-      notifier.next();
+      notifier.completeItem();
+      notifier.advance();
       expect(container.read(sessionProvider)!.item?.exerciseId, 'ex_12');
       expect(container.read(sessionProvider)!.blockIndex, 1);
 
-      notifier.next();
+      notifier.completeItem();
+      notifier.advance();
       // Finishing the last item ends the session.
       await Future<void>.delayed(Duration.zero);
       expect(container.read(sessionProvider), isNull);
@@ -204,7 +209,8 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(sessionProvider.notifier);
 
-      notifier.start(routine: _plan());
+      notifier.load(routine: _plan());
+      container.read(sessionProvider.notifier).start();
       notifier.skip();
       await notifier.end();
 
@@ -223,8 +229,10 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(sessionProvider.notifier);
 
-      notifier.start(routine: _plan());
-      notifier.next();
+      notifier.load(routine: _plan());
+      container.read(sessionProvider.notifier).start();
+      notifier.completeItem();
+      notifier.advance();
       await notifier.end();
 
       final record = container.read(sessionRecordsProvider).single;
@@ -239,8 +247,10 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(sessionProvider.notifier);
 
-      notifier.start(routine: _plan());
-      notifier.next();
+      notifier.load(routine: _plan());
+      container.read(sessionProvider.notifier).start();
+      notifier.completeItem();
+      notifier.advance();
       await notifier.end();
 
       final day = container
@@ -260,7 +270,8 @@ void main() {
       addTearDown(container.dispose);
       final notifier = container.read(sessionProvider.notifier);
 
-      notifier.start(routine: _plan());
+      notifier.load(routine: _plan());
+      container.read(sessionProvider.notifier).start();
       notifier.pause();
       expect(container.read(sessionProvider)!.phase, SessionPhase.paused);
 
@@ -280,7 +291,8 @@ void main() {
         addTearDown(container.dispose);
         final notifier = container.read(sessionProvider.notifier);
 
-        notifier.start(routine: _plan());
+        notifier.load(routine: _plan());
+        container.read(sessionProvider.notifier).start();
         final before = container.read(sessionProvider)!.itemDuration;
         notifier.extend(const Duration(seconds: 30));
 
@@ -294,34 +306,44 @@ void main() {
       },
     );
 
-    test('a long background gap pauses instead of counting the time', () async {
+    test('backgrounding pauses instead of counting the time', () async {
       final clock = FixedClock(DateTime(2026, 3, 14, 18));
       final container = await _ready(clock);
       addTearDown(container.dispose);
       final notifier = container.read(sessionProvider.notifier);
 
-      notifier.start(routine: _plan());
+      notifier.load(routine: _plan());
+      container.read(sessionProvider.notifier).start();
       notifier.onBackgrounded();
 
       clock.advance(const Duration(minutes: 30));
-      expect(notifier.onResumed(), isTrue);
       expect(container.read(sessionProvider)!.phase, SessionPhase.paused);
-    });
-
-    test('a short background gap is simply resumed', () async {
-      final clock = FixedClock(DateTime(2026, 3, 14, 18));
-      final container = await _ready(clock);
-      addTearDown(container.dispose);
-      final notifier = container.read(sessionProvider.notifier);
-
-      notifier.start(routine: _plan());
-      notifier.onBackgrounded();
-
-      clock.advance(const Duration(minutes: 2));
-      expect(notifier.onResumed(), isFalse);
-      expect(container.read(sessionProvider)!.phase, SessionPhase.running);
+      final elapsed = notifier.itemElapsed;
+      expect(elapsed, lessThan(const Duration(minutes: 1)));
       await notifier.end();
     });
+
+    test(
+      'coming back leaves the session paused for the user to restart',
+      () async {
+        final clock = FixedClock(DateTime(2026, 3, 14, 18));
+        final container = await _ready(clock);
+        addTearDown(container.dispose);
+        final notifier = container.read(sessionProvider.notifier);
+
+        notifier.load(routine: _plan());
+        container.read(sessionProvider.notifier).start();
+        notifier.onBackgrounded();
+
+        clock.advance(const Duration(minutes: 2));
+        expect(notifier.onResumed(), isTrue, reason: 'it is sitting paused');
+        expect(container.read(sessionProvider)!.phase, SessionPhase.paused);
+
+        notifier.resume();
+        expect(container.read(sessionProvider)!.phase, SessionPhase.running);
+        await notifier.end();
+      },
+    );
 
     test(
       'marking clean records a clean tempo point for the exercise',
@@ -331,7 +353,8 @@ void main() {
         addTearDown(container.dispose);
         final notifier = container.read(sessionProvider.notifier);
 
-        notifier.start(routine: _plan());
+        notifier.load(routine: _plan());
+        container.read(sessionProvider.notifier).start();
         await notifier.markClean();
 
         final record = container.read(tempoRecordsProvider)['ex_1'];
