@@ -7,7 +7,7 @@
 **An offline guitar practice companion that turns a technique curriculum into a
 daily routine, a session timer, and an honest record of what you actually did.**
 
-`Flutter 3.41` · `Dart 3.11` · `Android + iOS` · `361 tests` · `no network`
+`Flutter 3.41` · `Dart 3.11` · `Android + iOS` · `365 tests` · `no network`
 
 </div>
 
@@ -100,7 +100,8 @@ because those two are the only places where something genuinely *arrived*.
 
 ## Privacy
 
-No account. No network client. No analytics, no crash reporter, no ads. Every
+No account. No network client — the one outbound action is handing the
+developer link to your browser, which the app does not follow itself. No analytics, no crash reporter, no ads. Every
 byte lives on the device, and the only way data leaves is a PDF or a JSON backup
 you explicitly asked for.
 
@@ -116,7 +117,7 @@ dart run tool/generate_icon.dart && dart run flutter_launcher_icons
 ```
 
 ```bash
-flutter test          # 361 tests
+flutter test          # 365 tests
 dart analyze          # clean
 flutter build apk --release
 ```

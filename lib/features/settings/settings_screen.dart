@@ -11,6 +11,7 @@ import 'package:fretwork/core/widgets/core_button.dart';
 import 'package:fretwork/core/widgets/core_card.dart';
 import 'package:fretwork/core/widgets/core_chip.dart';
 import 'package:fretwork/core/widgets/core_divider.dart';
+import 'package:fretwork/core/widgets/core_link.dart';
 import 'package:fretwork/core/widgets/core_list_tile.dart';
 import 'package:fretwork/core/widgets/core_scaffold.dart';
 import 'package:fretwork/core/widgets/core_section_header.dart';
@@ -166,7 +167,10 @@ class SettingsScreen extends ConsumerWidget {
                 const CoreText.caption('BUILT BY'),
                 const SizedBox(height: Sp.xs),
                 const CoreText.body('Yousof Hashemzadeh'),
-                const CoreText.bodySm('youdexsof.ir'),
+                const CoreLink(
+                  url: 'https://youdexsof.ir',
+                  label: 'youdexsof.ir',
+                ),
                 const SizedBox(height: Sp.md),
                 const CoreText.bodySm(
                   'The practice structure is inspired by the Rock Discipline '
