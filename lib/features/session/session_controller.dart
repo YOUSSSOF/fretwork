@@ -8,8 +8,10 @@ import 'package:fretwork/core/data/providers.dart';
 import 'package:fretwork/core/models/day_record.dart';
 import 'package:fretwork/core/models/preferences.dart';
 import 'package:fretwork/core/models/routine_day.dart';
+import 'package:fretwork/core/models/session_snapshot.dart';
 import 'package:fretwork/features/progress/progress_controller.dart';
 import 'package:fretwork/features/routine/routine_controller.dart';
+import 'package:fretwork/features/session/active_session_controller.dart';
 import 'package:fretwork/features/session/metronome/metronome_controller.dart';
 import 'package:fretwork/features/session/records_controller.dart';
 import 'package:fretwork/features/settings/preferences_controller.dart';
@@ -172,10 +174,17 @@ class SessionNotifier extends Notifier<SessionState?> {
   /// way to add time is to give elapsed time back.
   Duration _itemOffset = Duration.zero;
 
+  /// Time already banked by a session that was resumed from disk. The
+  /// stopwatches always start from zero; what was practised before the app was
+  /// closed is added back through these offsets.
+  Duration _sessionOffset = Duration.zero;
+
   Duration get itemElapsed {
     final raw = _itemWatch.elapsed + _itemOffset;
     return raw.isNegative ? Duration.zero : raw;
   }
+
+  Duration get totalElapsed => _sessionWatch.elapsed + _sessionOffset;
 
   /// Loads a plan without starting the clock. The user presses Start.
   void load({RoutineDay? routine, TimerMode? mode}) {
@@ -195,11 +204,47 @@ class SessionNotifier extends Notifier<SessionState?> {
     _prepareMetronomeForCurrentItem();
   }
 
+  /// Picks a session back up exactly where it was left.
+  ///
+  /// It comes back paused, never running: the app may have been closed hours
+  /// ago, and a click starting under a guitar that is still in its case is the
+  /// one thing worse than an extra tap.
+  bool restore(SessionSnapshot snapshot) {
+    if (state != null) return false;
+    if (snapshot.routine.allItems.isEmpty) return false;
+
+    _itemOffset = snapshot.itemElapsed;
+    _sessionOffset = snapshot.totalElapsed;
+    _itemWatch.reset();
+    _sessionWatch.reset();
+    _metronomeWasRunning = false;
+
+    state = SessionState(
+      id: snapshot.id,
+      routine: snapshot.routine,
+      startedAt: snapshot.startedAt,
+      mode: snapshot.mode,
+      blockIndex: snapshot.blockIndex.clamp(
+        0,
+        snapshot.routine.blocks.length - 1,
+      ),
+      itemIndex: snapshot.itemIndex,
+      itemElapsed: snapshot.itemElapsed,
+      totalElapsed: snapshot.totalElapsed,
+      phase: SessionPhase.paused,
+      results: {for (final result in snapshot.results) result.key: result},
+    );
+    _prepareMetronomeForCurrentItem();
+    _startAutosave();
+    return true;
+  }
+
   void start() {
     final current = state;
     if (current == null || current.phase != SessionPhase.ready) return;
 
     _itemOffset = Duration.zero;
+    _sessionOffset = Duration.zero;
     _itemWatch
       ..reset()
       ..start();
@@ -210,6 +255,7 @@ class SessionNotifier extends Notifier<SessionState?> {
     _startAutosave();
     state = current.copyWith(phase: SessionPhase.running);
     unawaited(WakelockGuard.enable());
+    unawaited(_saveSnapshot());
   }
 
   void pause({bool remember = true}) {
@@ -228,9 +274,15 @@ class SessionNotifier extends Notifier<SessionState?> {
 
     state = current.copyWith(
       itemElapsed: itemElapsed,
-      totalElapsed: _sessionWatch.elapsed,
+      totalElapsed: totalElapsed,
       phase: SessionPhase.paused,
     );
+
+    // Stopping is the moment most likely to be followed by the app going away
+    // for good, so both the resume point and the credit earned so far are
+    // written now rather than on the next autosave tick.
+    unawaited(_saveSnapshot());
+    unawaited(_checkpoint());
   }
 
   void resume() {
@@ -240,7 +292,9 @@ class SessionNotifier extends Notifier<SessionState?> {
     _itemWatch.start();
     _sessionWatch.start();
     _startTicker();
+    _startAutosave();
     state = current.copyWith(phase: SessionPhase.running);
+    unawaited(WakelockGuard.enable());
 
     if (_metronomeWasRunning) {
       ref.read(metronomeProvider.notifier).start();
@@ -302,10 +356,11 @@ class SessionNotifier extends Notifier<SessionState?> {
 
     state = next.copyWith(
       itemElapsed: Duration.zero,
-      totalElapsed: _sessionWatch.elapsed,
+      totalElapsed: totalElapsed,
       phase: SessionPhase.running,
     );
     _prepareMetronomeForCurrentItem();
+    unawaited(_saveSnapshot());
   }
 
   /// Swaps the current item for another exercise, keeping the minutes.
@@ -332,6 +387,7 @@ class SessionNotifier extends Notifier<SessionState?> {
 
     state = current.copyWith(routine: current.routine.copyWith(blocks: blocks));
     _prepareMetronomeForCurrentItem();
+    unawaited(_saveSnapshot());
 
     // Keep the stored plan in step so the change survives leaving the screen.
     await ref
@@ -362,33 +418,69 @@ class SessionNotifier extends Notifier<SessionState?> {
     final current = state;
     if (current == null) return;
 
-    final item = current.item;
-    final results = {...current.results};
-    if (item != null && !results.containsKey(item.key)) {
-      final seconds = itemElapsed.inSeconds;
-      if (seconds > 0) results[item.key] = _resultFor(item, seconds: seconds);
-    }
-
     _teardown();
-
-    final now = ref.read(clockProvider).now();
-    final record = SessionRecord(
-      id: current.id,
-      startedAt: current.startedAt,
-      endedAt: now,
-      plannedMinutes: current.routine.plannedMinutes,
-      actualMinutes: (_sessionWatch.elapsed.inSeconds / 60).round(),
-      items: results.values.toList(),
-      abandoned: abandoned && results.length < current.totalItems,
-    );
-
-    await ref.read(sessionRecordsProvider.notifier).save(record);
-    await _writeDayRecord(record);
+    await _persist(current, abandoned: abandoned);
+    await ref.read(activeSessionProvider.notifier).clear();
 
     state = null;
     _sessionWatch.reset();
     _itemWatch.reset();
     _itemOffset = Duration.zero;
+    _sessionOffset = Duration.zero;
+  }
+
+  /// Writes what has been practised so far, without ending anything.
+  ///
+  /// Progress is logged exercise by exercise rather than only when a routine
+  /// runs to the end: half a session is half a session's worth of practice,
+  /// and analytics that only count finished routines quietly punish the days
+  /// where something came up.
+  Future<void> _checkpoint() async {
+    final current = state;
+    if (current == null || !current.hasStarted) return;
+    await _persist(current, abandoned: true);
+  }
+
+  /// Upserts the session record and re-derives the day from it.
+  ///
+  /// Called repeatedly for the same session id, so both writes have to be
+  /// idempotent — the record replaces its earlier self, and the day's minutes
+  /// are recomputed from the day's sessions rather than added to.
+  Future<void> _persist(SessionState session, {required bool abandoned}) async {
+    final results = _resultsIncludingCurrent(session);
+    if (results.isEmpty) return;
+
+    final now = ref.read(clockProvider).now();
+    final record = SessionRecord(
+      id: session.id,
+      startedAt: session.startedAt,
+      endedAt: now,
+      plannedMinutes: session.routine.plannedMinutes,
+      actualMinutes: (totalElapsed.inSeconds / 60).round(),
+      items: results.values.toList(),
+      abandoned: abandoned && results.length < session.totalItems,
+    );
+
+    await ref.read(sessionRecordsProvider.notifier).save(record);
+    await _writeDayRecord(record);
+  }
+
+  /// The finished items plus whatever time the item in flight has already
+  /// earned, so leaving mid-exercise still banks the minutes played.
+  Map<String, ItemResult> _resultsIncludingCurrent(SessionState session) {
+    final results = {...session.results};
+    final item = session.item;
+    if (item == null) return results;
+
+    final seconds = itemElapsed.inSeconds;
+    if (seconds <= 0) return results;
+
+    final existing = results[item.key];
+    // A finished item keeps its recorded time; only an item still running has
+    // its partial time folded in.
+    if (existing != null) return results;
+
+    return {...results, item.key: _resultFor(item, seconds: seconds)};
   }
 
   Future<void> _writeDayRecord(SessionRecord record) async {
@@ -397,7 +489,9 @@ class SessionNotifier extends Notifier<SessionState?> {
     final date = record.startedAt;
     final existing = days.forDate(date);
 
-    final completed = (existing?.completedMinutes ?? 0) + record.actualMinutes;
+    final completed = ref
+        .read(sessionRecordsProvider.notifier)
+        .completedMinutesOn(date);
     final planned = existing?.plannedMinutes ?? record.plannedMinutes;
 
     await days.put(
@@ -410,10 +504,32 @@ class SessionNotifier extends Notifier<SessionState?> {
           completedMinutes: completed,
           isRestDay: false,
         ),
-        sessionIds: [...?existing?.sessionIds, record.id],
+        sessionIds: {...?existing?.sessionIds, record.id}.toList(),
         milestoneAtTime: profile.milestone,
       ),
     );
+  }
+
+  Future<void> _saveSnapshot() async {
+    final current = state;
+    if (current == null || !current.hasStarted) return;
+
+    await ref
+        .read(activeSessionProvider.notifier)
+        .save(
+          SessionSnapshot(
+            id: current.id,
+            routine: current.routine,
+            startedAt: current.startedAt,
+            savedAt: ref.read(clockProvider).now(),
+            mode: current.mode,
+            blockIndex: current.blockIndex,
+            itemIndex: current.itemIndex,
+            itemElapsed: itemElapsed,
+            totalElapsed: totalElapsed,
+            results: current.results.values.toList(),
+          ),
+        );
   }
 
   void _startTicker() {
@@ -426,10 +542,11 @@ class SessionNotifier extends Notifier<SessionState?> {
 
   void _startAutosave() {
     _autosave?.cancel();
+    // Stamps the resume point on a timer, so a crash or a swipe-away costs
+    // seconds rather than the session.
     _autosave = Timer.periodic(kSessionAutosave, (_) {
-      final current = state;
-      if (current == null) return;
-      unawaited(ref.read(storeProvider).putMeta('runningSession', current.id));
+      if (state == null) return;
+      unawaited(_saveSnapshot());
     });
   }
 
@@ -444,10 +561,7 @@ class SessionNotifier extends Notifier<SessionState?> {
       return;
     }
 
-    state = current.copyWith(
-      itemElapsed: elapsed,
-      totalElapsed: _sessionWatch.elapsed,
-    );
+    state = current.copyWith(itemElapsed: elapsed, totalElapsed: totalElapsed);
   }
 
   ItemResult _resultFor(RoutineItem item, {required int seconds}) {
@@ -482,6 +596,9 @@ class SessionNotifier extends Notifier<SessionState?> {
 
     if (thenAdvance) {
       state = current.copyWith(results: results);
+      // Banked before moving on: what is done is done, whether or not the rest
+      // of the routine ever happens.
+      unawaited(_checkpoint());
       advance();
       return;
     }
@@ -496,9 +613,11 @@ class SessionNotifier extends Notifier<SessionState?> {
     state = current.copyWith(
       results: results,
       itemElapsed: current.itemDuration,
-      totalElapsed: _sessionWatch.elapsed,
+      totalElapsed: totalElapsed,
       phase: SessionPhase.itemComplete,
     );
+    unawaited(_checkpoint());
+    unawaited(_saveSnapshot());
   }
 
   SessionState? _nextPosition(SessionState current) {

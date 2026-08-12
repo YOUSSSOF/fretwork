@@ -21,6 +21,7 @@ import 'package:fretwork/features/progress/progress_controller.dart';
 import 'package:fretwork/features/routine/routine_controller.dart';
 import 'package:fretwork/features/routine/routine_service.dart';
 import 'package:fretwork/features/routine/widgets/routine_block_card.dart';
+import 'package:fretwork/features/session/active_session_controller.dart';
 import 'package:fretwork/features/session/records_controller.dart';
 import 'package:fretwork/features/shell/app_shell.dart';
 import 'package:fretwork/router.dart';
@@ -269,6 +270,7 @@ class _ActionBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = context.colors;
+    final resumable = ref.watch(resumableSessionProvider) != null;
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -290,7 +292,7 @@ class _ActionBar extends ConsumerWidget {
               children: [
                 Expanded(
                   child: CoreButton.primary(
-                    label: 'Start session',
+                    label: resumable ? 'Resume session' : 'Start session',
                     size: CoreButtonSize.lg,
                     fullWidth: true,
                     leading: Icons.play_arrow_rounded,

@@ -12,6 +12,7 @@ import 'package:fretwork/core/widgets/core_progress_ring.dart';
 import 'package:fretwork/core/widgets/core_scaffold.dart';
 import 'package:fretwork/core/widgets/core_text.dart';
 import 'package:fretwork/features/routine/routine_controller.dart';
+import 'package:fretwork/features/session/active_session_controller.dart';
 import 'package:fretwork/features/session/records_controller.dart';
 import 'package:fretwork/features/settings/preferences_controller.dart';
 import 'package:fretwork/features/shell/app_shell.dart';
@@ -82,6 +83,7 @@ class TodayCard extends ConsumerWidget {
     final progress = routine.plannedMinutes == 0
         ? 0.0
         : (completedMinutes / routine.plannedMinutes).clamp(0.0, 1.0);
+    final resumable = ref.watch(resumableSessionProvider);
 
     if (routine.isRestDay) {
       return CoreCard(
@@ -145,12 +147,35 @@ class TodayCard extends ConsumerWidget {
                 ),
             ],
           ),
+          if (resumable != null) ...[
+            const SizedBox(height: Sp.md),
+            Row(
+              children: [
+                Icon(
+                  Icons.history_rounded,
+                  size: 16,
+                  color: colors.accentStrong,
+                ),
+                const SizedBox(width: Sp.xs),
+                Expanded(
+                  child: CoreText.bodySm(
+                    'Paused at item ${resumable.flatIndex + 1} of '
+                    '${resumable.routine.allItems.length}.',
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: Sp.lg),
           Row(
             children: [
               Expanded(
                 child: CoreButton.primary(
-                  label: progress > 0 ? 'Continue session' : 'Start session',
+                  label: switch (resumable) {
+                    != null => 'Resume session',
+                    _ when progress > 0 => 'Continue session',
+                    _ => 'Start session',
+                  },
                   size: CoreButtonSize.lg,
                   fullWidth: true,
                   leading: Icons.play_arrow_rounded,

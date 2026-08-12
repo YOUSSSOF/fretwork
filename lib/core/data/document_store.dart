@@ -20,6 +20,10 @@ abstract final class BoxNames {
   /// ships no notation.
   static const String tabs = 'tabs';
 
+  /// At most one document: the session currently in flight, so closing the app
+  /// mid-routine is recoverable.
+  static const String activeSession = 'activeSession';
+
   static const List<String> all = [
     profile,
     preferences,
@@ -29,6 +33,7 @@ abstract final class BoxNames {
     tempos,
     rotation,
     tabs,
+    activeSession,
   ];
 }
 

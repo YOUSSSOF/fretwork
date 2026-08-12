@@ -7,6 +7,7 @@ import 'package:fretwork/core/data/providers.dart';
 import 'package:fretwork/core/models/exercise.dart';
 import 'package:fretwork/core/models/preferences.dart';
 import 'package:fretwork/core/models/routine_day.dart';
+import 'package:fretwork/core/models/session_snapshot.dart';
 import 'package:fretwork/core/motion/motion_scope.dart';
 import 'package:fretwork/core/motion/motion_tokens.dart';
 import 'package:fretwork/core/theme/app_colors.dart';
@@ -24,6 +25,7 @@ import 'package:fretwork/core/widgets/core_progress_ring.dart';
 import 'package:fretwork/core/widgets/core_segmented_grid.dart';
 import 'package:fretwork/core/widgets/core_sheet.dart';
 import 'package:fretwork/core/widgets/core_text.dart';
+import 'package:fretwork/features/session/active_session_controller.dart';
 import 'package:fretwork/features/session/metronome/metronome_controller.dart';
 import 'package:fretwork/features/session/metronome/metronome_engine.dart';
 import 'package:fretwork/features/session/session_controller.dart';
@@ -81,7 +83,39 @@ class _SessionScreenState extends ConsumerState<SessionScreen>
 
   void _loadIfNeeded() {
     if (!mounted || ref.read(sessionProvider) != null) return;
-    ref.read(sessionProvider.notifier).load(routine: _adHocRoutine());
+    final notifier = ref.read(sessionProvider.notifier);
+    final adHoc = _adHocRoutine();
+
+    // A session left in flight today wins over generating a fresh one: the
+    // user asked to practise, and half of today's routine is already behind
+    // them. Asking for a specific exercise is explicit enough to override it.
+    if (adHoc == null) {
+      final snapshot = ref.read(resumableSessionProvider);
+      if (snapshot != null && notifier.restore(snapshot)) {
+        _announceResume(snapshot);
+        return;
+      }
+    }
+
+    notifier.load(routine: adHoc);
+  }
+
+  void _announceResume(SessionSnapshot snapshot) {
+    if (!mounted) return;
+    final total = snapshot.routine.allItems.length;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            'Resumed at item ${snapshot.flatIndex + 1} of $total. '
+            'Press Resume when you are ready.',
+          ),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: context.colors.surface2,
+        ),
+      );
   }
 
   /// Builds a one-item plan for "practise now" from the library.

@@ -4,7 +4,7 @@ import 'package:hive_ce_flutter/hive_flutter.dart';
 
 /// Bumped whenever the shape of a persisted document changes. [_migrations]
 /// must gain a closure for every step.
-const int kSchemaVersion = 2;
+const int kSchemaVersion = 3;
 
 /// Bumped whenever `course_seed.dart` changes. On bump, stored routines are
 /// re-validated and any item referencing a removed exercise id is dropped.
@@ -40,6 +40,10 @@ final Map<int, Future<void> Function(DocumentStore store)> _migrations = {
   // already a no-op, so there is nothing to move — the version bump exists so
   // the step is recorded rather than skipped silently.
   2: (store) async {},
+  // v3 added the `activeSession` box, holding the one session in flight. Same
+  // story as v2: an unwritten box needs no migration, and the bump records the
+  // step rather than leaving a gap in the sequence.
+  3: (store) async {},
 };
 
 @visibleForTesting
